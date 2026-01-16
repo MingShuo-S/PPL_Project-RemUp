@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+    <head>
+        <meta charset="utf-8">
+        <title>RemUp</title>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <h1>Introduction</h1>
+        <p>你好，我是明朔。</p>
+        <p>
+            我是一名南大的软件工程学生。<br \>
+            这是我第一次接触html语言，主要是为了开发我的项目，顺便也能帮我熟悉一些前端开发的流程，希望会很有效。
+        </p>
+        <br />
+        <p>这是我的样子：</p>
+        <img src="https://pic1.imgdb.cn/item/68481ac058cb8da5c8419e99.png" width="256"  alt="Sunshine">
+        <p>并且你喜欢的话，可以进入我的b站主页一探究竟：</p>
+        <a href="https://space.bilibili.com/361518274?spm_id_from=333.1007.0.0" target="_blank">这是我的b站</a>
+        <br />
+        <p>这个编译器一直在给我的中文逗号报错要烦死了。。。</p>
+
+        <hr />
+
+        <h2>一个小测试</h2>
+        <p>下面是一个按钮和一个输入框，点击按钮或输入内容时会弹出提示框：</p>
+        <button onclick="alert('Button clicked!')">Click Me</button>
+        <!--这块还是需要同时定义onomouseover和onmouseout两个事件的，但好像是说CSS可以直接干好这件事情-->
+        <div onmouseover="this.style.backgroundColor='yellow'" onmouseout="this.style.backgroundColor=''">Hover over me</div>
+        <input type="text" onchange="alert('Value changed!')">
+        <hr />
+        <!--这是一个注释-->
+
+        <h1>布局测试</h1>
+        <p>下面是一个简单的布局测试：</p>
+        <div id="container" style="width:500px;height: 200px;background-color: black;">
+            <div id="header" style="background-color: orange;height: 50px;">我觉得我画的这个特别好看啊</div>
+            <div id="content" style="background-color: white;height: 100px;">不好看吗</div>
+        </div>
+        <br />
+        <div class="card">
+            <h1>Hello CSS!</h1>
+            <p>这是我写的第一个样式卡片。</p>
+            <button>点我</button>
+        </div>
+        <br />
+        <div class="card">
+            <p>这是一段测试</p>
+            <h1>你好吗 我很好 我好的不得了 真不行了 我还在写
+            </h1>
+        </div>
+        <br />
+        <div class="card">
+            <h1>列表</h1>
+            <ul>
+                <li>萝卜</li>   
+                <li>纸巾</li>
+            </ul>
+            <ol>
+                <li>重复-</li>
+                <li>真蚌！</li>
+            </ol>
+        </div>
+
+    </body>
+
+</html>
