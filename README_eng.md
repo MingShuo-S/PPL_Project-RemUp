@@ -1,3 +1,4 @@
+![RemUp Logo](Logo.png)
 # RemUp
 
 <!-- Language Switcher -->
