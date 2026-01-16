@@ -1,0 +1,30 @@
+# 测试文件
+test_*
+*_test.py
+tests/
+test/
+*.test
+
+# 图片文件（如果不需要的话）
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.bmp
+
+# 其他临时文件
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# 日志文件
+*.log
+
+# 环境文件
+.env
+venv/
+env/
