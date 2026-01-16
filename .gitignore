@@ -11,6 +11,7 @@ test/
 *.jpeg
 *.gif
 *.bmp
+*.psd
 
 # 其他临时文件
 __pycache__/

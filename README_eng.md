@@ -11,18 +11,6 @@
 
 **RemUp** is an innovative lightweight markup language designed to build a "Learn-Understand-Relearn" memory loop.
 
-## Table of Contents
-
-- #core-concepts
-- #syntax-quick-reference
-- #complete-example
-- #quick-start
-- #installation--usage
-- #project-structure
-- #contributing
-- #license
-- #contact
-
 ## Core Concepts
 
 ### 🎴 Memory Unit System
