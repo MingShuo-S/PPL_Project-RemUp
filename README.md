@@ -1,4 +1,4 @@
-
+<img href="Logo.png" width="100" height="100" align="right" alt="RemUp Logo">
 
 # RemUp
 
