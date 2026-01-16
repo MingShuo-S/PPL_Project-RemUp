@@ -1,7 +1,7 @@
 # Copilot Instructions for PPL_Project-RemUp
 
 ## Project Overview
-This is the RemUp project, currently in early development stage.
+This is the RemUp project, currently in the early development stage.
 
 ## Code Style and Conventions
 - Write clear, maintainable, and well-documented code
@@ -22,7 +22,7 @@ This is the RemUp project, currently in early development stage.
 ## Git Workflow
 - Write clear, descriptive commit messages
 - Keep commits focused and atomic
-- Follow conventional commit format when possible
+- Follow conventional commit format when possible (e.g., `feat:`, `fix:`, `docs:`, `test:`, `chore:`)
 
 ## Dependencies
 - Only add necessary dependencies
