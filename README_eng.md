@@ -87,10 +87,10 @@ Create a `.ru` file (RemUp file):
 is the basic unit for organizing code.
 
 ---Syntax
-```python
-def greet(name):
-    return f"Hello, {name}!"
-```
+    ```python
+    def greet(name):
+        return f"Hello, {name}!"
+    ```
 
 ---Explanation
 - Use `def` keyword to define functions
