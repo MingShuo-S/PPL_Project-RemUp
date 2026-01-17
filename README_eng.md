@@ -1,14 +1,21 @@
-![RemUp Logo](Logo.png)
-# RemUp
+<!--Logo-->
+<div align="center">
+  <a href="https://github.com/MingShuo-S/PPL_Project-RemUp">
+    <img src="Logo.svg" alt="RemUp Logo" width="200" style="border-radius: 8px;">
+  </a>
+  <h3>RemUp - Memory Enhancement Language</h3>
+</div>
 
-<!-- Language Switcher -->
+<!-- 语言切换器 -->
 <div align="right">
   <small>
-    🌐 <strong>Language:</strong> 
+    🌐 <strong>Language: </strong> 
     <a href="README.md">中文</a> • 
     <a href="README_eng.md">English</a>
   </small>
 </div>
+
+# RemUp 
 
 **RemUp** is an innovative lightweight markup language designed to build a "Learn-Understand-Relearn" memory loop.
 

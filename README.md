@@ -1,5 +1,10 @@
-![RemUp Logo](Logo.png)
-# RemUp
+<!--Logo-->
+<div align="center">
+  <a href="https://github.com/MingShuo-S/PPL_Project-RemUp">
+    <img src="Logo.svg" alt="RemUp Logo" width="200" style="border-radius: 8px;">
+  </a>
+  <h3>RemUp - 记忆辅助向语言</h3>
+</div>
 
 <!-- 语言切换器 -->
 <div align="right">
@@ -10,6 +15,7 @@
   </small>
 </div>
 
+# RemUp 
 **RemUp** 是一个创新的轻量级标记语言，专为构建"学习-理解-再学习"的记忆闭环而设计。
 
 ## 核心概念
