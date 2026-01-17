@@ -1,0 +1,29 @@
+<header class="page-header">
+    <div class="header-content">
+        <h1>{{ page_title|default("RemUp文档") }}</h1>
+        {% if page_subtitle %}
+        <p class="subtitle">{{ page_subtitle }}</p>
+        {% endif %}
+        
+        <!-- 编译信息 -->
+        {% if compile_info %}
+        <div class="compile-info">
+            <span>编译时间: {{ compile_time|date("%Y-%m-%d %H:%M") }}</span>
+            {% if total_cards %}
+            <span>卡片总数: {{ total_cards }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- 导航 -->
+    {% if archives and archives|length > 1 %}
+    <nav class="archive-nav">
+        {% for archive in archives %}
+        <a href="#archive-{{ archive.name|slugify }}" class="nav-link">
+            {{ archive.name }} ({{ archive.cards|length }})
+        </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+</header>

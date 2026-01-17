@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="document-container">
+    <!-- 归档列表 -->
+    {% for archive in archives %}
+    <section class="archive-section" id="archive-{{ archive.name|slugify }}">
+        <header class="archive-header">
+            <h2 class="archive-title">
+                <span class="archive-start">--&lt;</span>
+                {{ archive.name }}
+                <span class="archive-end">&gt;--</span>
+            </h2>
+            {% if archive.description %}
+            <p class="archive-description">{{ archive.description }}</p>
+            {% endif %}
+            
+            <!-- 归档统计 -->
+            <div class="archive-stats">
+                <span class="stat">卡片: {{ archive.cards|length }}</span>
+                {% set total_regions = 0 %}
+                {% for card in archive.cards %}
+                    {% set total_regions = total_regions + card.regions|length %}
+                {% endfor %}
+                <span class="stat">区域: {{ total_regions }}</span>
+            </div>
+        </header>
+        
+        <!-- 卡片网格导航 -->
+        {% if archive.cards and archive.cards|length > 1 %}
+        <nav class="cards-nav">
+            <h3>卡片导航</h3>
+            <div class="cards-grid">
+                {% for card in archive.cards %}
+                <a href="#card-{{ card.theme|slugify }}" class="card-link">
+                    <span class="card-theme">{{ card.theme }}</span>
+                    {% if card.labels %}
+                    <span class="card-labels">
+                        {% for label in card.labels %}
+                        <span class="label-badge">{{ label.symbol }}</span>
+                        {% endfor %}
+                    </span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </nav>
+        {% endif %}
+        
+        <!-- 卡片内容 -->
+        <div class="cards-container">
+            {% for card in archive.cards %}
+            <article class="card" id="card-{{ card.theme|slugify }}">
+                <!-- 卡片头部 -->
+                <header class="card-header">
+                    <h3 class="card-title">
+                        <span class="card-start">&lt;+</span>
+                        {{ card.theme }}
+                        <span class="card-end">/+&gt;</span>
+                    </h3>
+                    
+                    <!-- 标签区域 -->
+                    {% if card.labels %}
+                    <div class="labels-container">
+                        {% for label in card.labels %}
+                        <div class="label label-{{ label.type|default('default') }}">
+                            <span class="label-symbol">{{ label.symbol }}</span>
+                            <span class="label-content">
+                                {% for item in label.content %}
+                                    {% if item.startswith('#') %}
+                                    <a href="#card-{{ item[1:]|slugify }}" class="label-link">{{ item[1:] }}</a>
+                                    {% else %}
+                                    <span class="label-text">{{ item }}</span>
+                                    {% endif %}
+                                    {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </header>
+                
+                <!-- 区域内容 -->
+                <div class="card-content">
+                    {% for region in card.regions %}
+                    <section class="region">
+                        <hr class="region-divider">
+                        <h4 class="region-title">{{ region.name }}</h4>
+                        <div class="region-content">
+                            {% if region.lines %}
+                            <div class="content-lines">
+                                {% for line in region.lines %}
+                                <div class="content-line">{{ line|safe }}</div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="content-text">{{ region.content|safe }}</div>
+                            {% endif %}
+                            
+                            <!-- 区域内的注卡 -->
+                            {% if region.vibe_cards %}
+                            <div class="region-vibes">
+                                {% for vibe in region.vibe_cards %}
+                                <div class="vibe-card" id="vibe-{{ vibe.content|slugify }}">
+                                    <div class="vibe-content">
+                                        <strong>{{ vibe.content }}</strong>
+                                        <span class="vibe-annotation">{{ vibe.annotation }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+                
+                <!-- 卡片注卡 -->
+                {% if card.vibe_cards %}
+                <footer class="card-footer">
+                    <h4>相关注卡</h4>
+                    <div class="card-vibes">
+                        {% for vibe in card.vibe_cards %}
+                        <a href="#vibe-{{ vibe.content|slugify }}" class="vibe-link">
+                            {{ vibe.content }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </footer>
+                {% endif %}
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endfor %}
+    
+    <!-- 注卡归档 -->
+    {% if vibe_archive and vibe_archive.cards %}
+    <section class="vibe-archive" id="vibe-archive">
+        <header class="archive-header">
+            <h2 class="archive-title">
+                <span class="archive-start">--&lt;</span>
+                {{ vibe_archive.name|default("自动生成注卡") }}
+                <span class="archive-end">&gt;--</span>
+            </h2>
+            <p class="archive-description">基于内容中的注卡自动生成的知识卡片</p>
+        </header>
+        
+        <div class="cards-container">
+            {% for card in vibe_archive.cards %}
+            <article class="card vibe-generated-card" id="vibe-card-{{ card.theme|slugify }}">
+                <header class="card-header">
+                    <h3 class="card-title">
+                        <span class="card-start">&lt;+</span>
+                        {{ card.theme }}
+                        <span class="card-end">/+&gt;</span>
+                    </h3>
+                </header>
+                
+                <div class="card-content">
+                    {% for region in card.regions %}
+                    <section class="region">
+                        <hr class="region-divider">
+                        <h4 class="region-title">{{ region.name }}</h4>
+                        <div class="region-content">
+                            {{ region.content|safe }}
+                        </div>
+                    </section>
+                    {% endfor %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

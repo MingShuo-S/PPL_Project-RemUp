@@ -1,0 +1,3 @@
+# RemUp编译器依赖
+psutil
+setuptools
