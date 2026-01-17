@@ -1,10 +1,330 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>RemUp Test</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" type="text/css" href="RemStyle.css">
-    </head>
-	
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemUp 语法演示 - 完整实现</title>
+    <link rel="stylesheet" href="RemStyle.css">
+</head>
+<body>
+    <div class="page-container">
+        <header class="page-header">
+            <h1>RemUp 记忆升级语言</h1>
+            <p class="subtitle">基于"学习-理解-再学习"闭环的轻量级标记语言</p>
+            <p>文件扩展名: <span class="file-extension">.ru</span> (用户编写) 或 <span class="file-extension">.rem</span> (编译器生成)</p>
+        </header>
+        
+        <!-- 语法指南 -->
+        <section class="syntax-guide">
+            <h2>📚 语法快速指南</h2>
+            <p>RemUp 文档的基本组织单位是"记忆单元"（卡片），分为主卡和注卡两种类型。</p>
+            
+            <div class="note">
+                <strong>提示：</strong> 编译后，所有注卡会自动生成对应的主卡，并保存在 <span class="file-extension">原文件名_vibes.rem</span> 文件中。
+            </div>
+        </section>
+        
+        <!-- 归档示例 -->
+        <div class="archive" id="english-learning">
+            <div class="archive-title">英语学习</div>
+            <div class="archive-cards">
+                <a href="#vigilant" class="archive-card-link">vigilant</a>
+                <a href="#careful" class="archive-card-link">careful</a>
+                <a href="#watchful" class="archive-card-link">watchful</a>
+            </div>
+        </div>
+        
+        <!-- 主卡示例 1 -->
+        <div class="card" id="vigilant">
+            <h2 class="card-title">vigilant</h2>
+            
+            <!-- 标签区域 - 右上角 -->
+            <div class="labels-container">
+                <div class="label">
+                    <span class="label-symbol">></span>
+                    <span class="label-content">careful</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">></span>
+                    <span class="label-content">watchful</span>
+                </div>
+                <div class="label important">
+                    <span class="label-symbol">!</span>
+                    <span class="label-content">重点词汇</span>
+                </div>
+            </div>
+            
+            <!-- 区域：解释 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">解释</div>
+                <div class="region-content">
+                    <div class="content">
+                        <p>adj. 警惕的；警觉的；戒备的</p>
+                        <p><span class="annotation">vigilant
+                            <span class="annotation-popup">来自拉丁语vigilare，意为"保持清醒"</span>
+                        </span> <span class="inline-explanation">形容词</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 区域：词组 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">词组</div>
+                <div class="region-content">
+                    <div class="content">
+                        <ul>
+                            <li>be vigilant about/against/over <span class="inline-explanation">对…保持警惕</span></li>
+                            <li>remain/stay vigilant <span class="inline-explanation">保持警惕</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 区域：例句 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">例句</div>
+                <div class="region-content">
+                    <div class="content">
+                        <ul>
+                            <li>Citizens are urged to remain vigilant against 
+                                <span class="annotation">cyber scams
+                                    <span class="annotation-popup">指通过互联网进行的欺诈行为</span>
+                                </span>. 
+                                <span class="inline-explanation">敦促公民对网络诈骗保持警惕</span>
+                            </li>
+                            <li>The security guard must be vigilant at all times. 
+                                <span class="inline-explanation">保安必须时刻保持警觉</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主卡示例 2 -->
+        <div class="card" id="python-function">
+            <h2 class="card-title">python_function</h2>
+            
+            <div class="labels-container">
+                <div class="label important">
+                    <span class="label-symbol">!</span>
+                    <span class="label-content">重要概念</span>
+                </div>
+                <div class="label info">
+                    <span class="label-symbol">i</span>
+                    <span class="label-content">编程基础</span>
+                </div>
+                <div class="label question">
+                    <span class="label-symbol">?</span>
+                    <span class="label-content">如何定义</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">→</span>
+                    <span class="label-content">变量</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">→</span>
+                    <span class="label-content">类</span>
+                </div>
+            </div>
+            
+            <!-- 区域：定义 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">定义</div>
+                <div class="region-content">
+                    <div class="content">
+                        <p><span class="annotation">函数
+                            <span class="annotation-popup">完成特定功能的代码块</span>
+                        </span>是组织代码的基本单元。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 区域：语法 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">语法</div>
+                <div class="region-content">
+                    <div class="code-block">
+                        <div class="language">python</div>
+                        <pre><code>def greet(name):
+    """返回问候语"""
+    return f"Hello, {name}!"</code></pre>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 区域：说明 -->
+            <div class="region">
+                <hr class="region-line">
+                <div class="region-title">说明</div>
+                <div class="region-content">
+                    <div class="content">
+                        <ul>
+                            <li>使用 <code>def</code> 关键字定义函数 <span class="inline-explanation">definition的缩写</span></li>
+                            <li>函数名后跟括号和参数 <span class="inline-explanation">参数是可选的</span></li>
+                            <li>函数体需要缩进 <span class="inline-explanation">通常使用4个空格</span></li>
+                            <li>使用 <code>return</code> 返回值 <span class="inline-explanation">如果没有return，函数返回None</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 归档示例 2 -->
+        <div class="archive" id="programming-basics">
+            <div class="archive-title">编程基础</div>
+            <div class="archive-cards">
+                <a href="#python-function" class="archive-card-link">python_function</a>
+                <a href="#variables" class="archive-card-link">variables</a>
+                <a href="#control-flow" class="archive-card-link">control_flow</a>
+                <a href="#data-types" class="archive-card-link">data_types</a>
+            </div>
+        </div>
+        
+        <!-- 模板系统示例 -->
+        <section class="syntax-guide">
+            <h2>🔧 模板系统</h2>
+            
+            <div class="template-definition">
+                <strong>模板定义：</strong><br>
+                %template word_card<br>
+                <code>&lt;+$word<br>
+                ($tag: $tag_content)<br>
+                ---definition<br>
+                $definition<br>
+                ---example<br>
+                $example<br>
+                /+</code>
+            </div>
+            
+            <div class="template-use">
+                <strong>模板使用：</strong><br>
+                %use word_card{<br>
+                vigilant<br>
+                >: #careful, #watchful<br>
+                adj. 警惕的；警觉的；戒备的<br>
+                Citizens are urged to remain vigilant against cyber scams.<br>
+                }
+            </div>
+        </section>
+        
+        <!-- 注卡生成说明 -->
+        <section class="syntax-guide">
+            <h2>💡 注卡系统</h2>
+            <p>注卡语法：<code>`内容`[批注]</code></p>
+            <p>示例：<code>`网络诈骗`[指通过互联网进行的欺诈行为]</code></p>
+            
+            <div class="note">
+                <strong>编译行为：</strong> 每个注卡都会自动生成一个对应的主卡，主题为"内容"，内容为"批注"，标签会链接回来源主卡。
+            </div>
+            
+            <div class="content">
+                <p>在上面的示例中，注卡 <span class="annotation">vigilant
+                    <span class="annotation-popup">来自拉丁语vigilare，意为"保持清醒"</span>
+                </span> 会自动生成一个主题为"vigilant"的主卡，内容为"来自拉丁语vigilare，意为'保持清醒'"，标签会链接回当前主卡。</p>
+            </div>
+        </section>
+        
+        <!-- 标签系统说明 -->
+        <section class="syntax-guide">
+            <h2>🏷️ 标签系统详解</h2>
+            
+            <div class="labels-container" style="position: relative; top: 0; right: 0; margin: 20px 0;">
+                <div class="label capsule">
+                    <span class="label-symbol">⚠</span>
+                    <span class="label-content">关系符号</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">></span>
+                    <span class="label-content">相关内容1</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">!</span>
+                    <span class="label-content">相关内容2</span>
+                </div>
+                <div class="label">
+                    <span class="label-symbol">i</span>
+                    <span class="label-content">相关内容3...</span>
+                </div>
+            </div>
+            
+            <div class="content">
+                <p>每个标签由两部分组成：</p>
+                <ul>
+                    <li><strong>关系符号</strong>：显示在蓝色圆圈/胶囊中，用户自定义（1-3个Unicode字符）</li>
+                    <li><strong>相关内容</strong>：显示前四个字或两个词，点击跳转到对应主卡</li>
+                </ul>
+                <p>符号示例：<code>(>: #careful, #watchful, 近义词)</code></p>
+                <p>其中 <code>></code> 是关系符号，<code>#careful</code>、<code>#watchful</code>、<code>近义词</code> 是相关内容。</p>
+            </div>
+        </section>
+    </div>
 
+    <script>
+        // 平滑滚动到锚点
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // 标签点击跳转（模拟功能）
+        document.querySelectorAll('.label-content').forEach(content => {
+            content.addEventListener('click', function() {
+                const text = this.textContent.trim();
+                alert(`点击标签: "${text}"\n在实际实现中，将跳转到对应的主卡`);
+            });
+        });
+        
+        // 注卡点击固定功能
+        document.querySelectorAll('.annotation').forEach(annotation => {
+            let isFixed = false;
+            
+            annotation.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const popup = this.querySelector('.annotation-popup');
+                
+                if (isFixed) {
+                    popup.style.display = 'none';
+                } else {
+                    popup.style.display = 'block';
+                    popup.style.position = 'fixed';
+                    popup.style.zIndex = '10000';
+                    
+                    // 计算位置
+                    const rect = this.getBoundingClientRect();
+                    popup.style.left = (rect.left + rect.width + 10) + 'px';
+                    popup.style.top = rect.top + 'px';
+                }
+                
+                isFixed = !isFixed;
+            });
+        });
+        
+        // 点击其他地方关闭固定的注卡
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.annotation-popup').forEach(popup => {
+                popup.style.display = 'none';
+            });
+            document.querySelectorAll('.annotation').forEach(annotation => {
+                annotation.isFixed = false;
+            });
+        });
+    </script>
+</body>
 </html>

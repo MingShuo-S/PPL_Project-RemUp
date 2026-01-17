@@ -1,9 +1,10 @@
 <!--Logo-->
 <div align="center">
   <a href="https://github.com/MingShuo-S/PPL_Project-RemUp">
-    <img src="Logo.svg" alt="RemUp Logo" width="200" style="border-radius: 8px;">
+    <img src="Logo.svg" alt="RemUp Logo" width="500" height="120" style="border-radius: 8px;  object-fit: cover;object-position: center; 
+border: 0px solid #ddd;">
   </a>
-  <h3>RemUp - Memory Enhancement Language</h3>
+  <h3>RemUp - 记忆辅助向语言</h3>
 </div>
 
 <!-- 语言切换器 -->
