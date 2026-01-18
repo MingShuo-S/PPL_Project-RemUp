@@ -151,24 +151,21 @@ adj. 警惕的；警觉的；戒备的
 ## 项目结构
 
 ```
-PPL_Project-RemUp/
-├── src/                    # 源代码目录
-│   ├── compiler/          # RemUp编译器核心
-│   │   ├── parser.py      # 语法解析器
-│   │   ├── transformer.py # AST转换器
-│   │   └── generator.py   # HTML生成器
-│   ├── core/              # 核心数据类型
-│   │   ├── cards.py       # 卡片模型定义
-│   │   └── annotations.py # 注卡系统
-│   └── utils/             # 工具函数
-├── examples/              # 示例文件
-│   ├── vocabulary.ru      # 词汇学习示例
-│   ├── programming.ru     # 编程概念示例
-│   └── concepts.ru         # 概念学习示例
-├── templates/              # 输出模板
-├── docs/                  # 文档
-├── requirements.txt       # Python依赖
-└── README.md             # 本项目说明
+remup_compiler/
+├── remup/
+│   ├── __init__.py      # 初始化文件
+│   ├── lexer.py         # 词法解析器
+│   ├── parser.py        # 语法解析器
+│   ├── ast_nodes.py     # 抽象语法树定义
+│   ├── compiler.py      # 编译器
+│   ├── html_generator.py# HTML生成器
+│   └── main.py          # 主程序入口
+├── static/              # 静态资源
+│   └── css/
+│       └── RemStyle.css
+├── examples/            # 示例文件
+├── tests/               # 测试用例
+└── setup.py             # 安装程序
 ```
 
 ## 核心特性详解

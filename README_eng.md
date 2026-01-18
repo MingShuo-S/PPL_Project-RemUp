@@ -152,24 +152,21 @@ In Python, `variables`[Data storage containers] are used to store data.
 ## Project Structure
 
 ```
-PPL_Project-RemUp/
-├── src/                    # Source code directory
-│   ├── compiler/          # RemUp compiler core
-│   │   ├── parser.py      # Syntax parser
-│   │   ├── transformer.py # AST transformer
-│   │   └── generator.py   # HTML generator
-│   ├── core/              # Core data types
-│   │   ├── cards.py       # Card model definitions
-│   │   └── annotations.py # Annotation system
-│   └── utils/             # Utility functions
-├── examples/              # Example files
-│   ├── vocabulary.ru      # Vocabulary learning example
-│   ├── programming.ru     # Programming concepts example
-│   └── concepts.ru        # Concept learning example
-├── templates/             # Output templates
-├── docs/                  # Documentation
-├── requirements.txt       # Python dependencies
-└── README.md              # This README file
+remup_compiler/
+├── remup/
+│   ├── __init__.py     
+│   ├── lexer.py        
+│   ├── parser.py        
+│   ├── ast_nodes.py    
+│   ├── compiler.py     
+│   ├── html_generator.py
+│   └── main.py         
+├── static/              
+│   └── css/
+│       └── RemStyle.css
+├── examples/           
+├── tests/               
+└── setup.py              
 ```
 
 ## Core Features Detailed
