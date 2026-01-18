@@ -1,68 +1,35 @@
-"""
-RemUp编译器包
-"""
+"""RemUp编译器 - 将RemUp标记语言(.ru文件)转换为HTML"""
+
+from .compiler import compile_remup, RemUpCompiler
+from .html_generator import HTMLGenerator
+from .parser import Parser
+from .lexer import Lexer
+
+# 从ast_nodes中导入主要的类和函数
+from .ast_nodes import (
+    Document, Archive, MainCard, Region, Label, 
+    VibeCard, Inline_Explanation, Rem_List, Code_Block, VibeArchive
+)
 
 __version__ = "1.0.0"
 __author__ = "MingShuo_S"
 __email__ = "2954809209@qq.com"
 
-# 导入主要组件
-from .compiler import RemUpCompiler, CompileConfig, CompileResult
-from .parser import RemUpParser, VibeCardProcessor
-from .html_generator import HTMLGenerator
-from .template_engine import AdvancedTemplateEngine, SimpleTemplateEngine
-from .ast_nodes import Document, Archive, MainCard, Label, Region, VibeCard, VibeArchive
-
-# 导入工具类
-from .utils import (
-    RemUpLogger,
-    FileUtils,
-    TextUtils, 
-    ConfigUtils,
-    ValidationUtils,
-    PerformanceUtils,
-    get_version,
-    get_timestamp,
-    format_file_size,
-    create_backup
-)
-
-# 导出主要类
+# 定义包的公共API接口
 __all__ = [
-    'RemUpCompiler',
-    'CompileConfig', 
-    'CompileResult',
-    'RemUpParser',
-    'VibeCardProcessor', 
-    'HTMLGenerator',
-    'AdvancedTemplateEngine',
-    'SimpleTemplateEngine',
-    'Document',
-    'Archive', 
-    'MainCard',
-    'Label',
-    'Region',
-    'VibeCard', 
-    'VibeArchive',
-    'RemUpLogger',
-    'FileUtils',
-    'TextUtils',
-    'ConfigUtils', 
-    'ValidationUtils',
-    'PerformanceUtils'
+    # 主要功能类和函数
+    "compile_remup",
+    "RemUpCompiler",
+    "HTMLGenerator", 
+    "Parser",
+    "Lexer",
+    
+    # AST节点类
+    "Document", "Archive", "MainCard", "Region", "Label",
+    "VibeCard", "Inline_Explanation", "Rem_List", "Code_Block", "VibeArchive",
+    
+    # 元数据
+    "__version__", "__author__", "__email__"
 ]
 
-# 版本信息
-def get_version():
-    """获取版本信息"""
-    return __version__
-
-def get_info():
-    """获取模块信息"""
-    return {
-        "name": "RemUp Compiler",
-        "version": __version__,
-        "author": __author__,
-        "email": __email__,
-        "description": "将.ru文件编译为HTML学习笔记"
-    }
+print(f"RemUp编译器 v{__version__} 已加载成功！支持文件格式: .ru, .remup")

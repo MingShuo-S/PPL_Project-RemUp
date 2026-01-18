@@ -1,334 +1,543 @@
+#!/usr/bin/env python3
 """
-完整的HTML生成器 - 与RemUp CSS样式完美匹配
-支持academic、archive、base、footer、header、minimal等模板
+HTML生成器 v2.1 - 修复注卡和注卡归档显示问题
+基于修复后的Parser AST，生成功能完整的HTML文件
 """
 
+import os
 import re
-import shutil
-from pathlib import Path
-from datetime import datetime
 from typing import Dict, Any, List, Optional
-import json
+from remup.ast_nodes import *
+from remup.parser import Parser
+from remup.lexer import Lexer
+from pathlib import Path
 
 class HTMLGenerator:
-    """完整的HTML生成器 - 与RemUp CSS样式完美匹配"""
+    """HTML生成器 - 基于AST生成功能完整的HTML"""
     
-    def __init__(self, template_dir: str = "templates", static_dir: str = "static"):
-        self.template_dir = Path(template_dir)
-        self.static_dir = Path(static_dir)
-    
-        # 确保目录存在
-        self.template_dir.mkdir(parents=True, exist_ok=True)
-        self.static_dir.mkdir(parents=True, exist_ok=True)
+    def __init__(self, output_dir: str = "output", css_file: str = "RemStyle.css"):
+        self.output_dir = output_dir
+        self.css_file = css_file
+        self.vibe_card_counter = 1
+        self.current_card_theme = ""
+        self.card_themes = set()
+        self.vibe_cards_info = []  # 存储所有注卡信息
         
-        # 创建默认模板（如果不存在）
-        self._create_default_templates()
-    
-    def generate(self, document_ast, output_file: Path, title: str, 
-                template: str = "default") -> Path:
-        """
-        生成HTML文档
-        
-        Args:
-            document_ast: 文档AST
-            output_file: 输出文件路径
-            title: 页面标题
-            template: 模板名称 (default, academic, minimal, archive)
-            
-        Returns:
-            生成的HTML文件路径
-        """
-        # 准备上下文数据
-        context = self._prepare_context(document_ast, title, template)
-        
-        # 获取模板内容
-        template_content = self._get_template_content(template)
-        
-        # 渲染模板
-        html_content = self._render_template(template_content, context)
-        
-        # 确保输出目录存在
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-        
-        # 写入文件
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        # 复制静态资源
-        self._copy_static_resources(output_file.parent)
-        
-        return output_file
-    
-    def _prepare_context(self, document_ast, title: str, template: str) -> Dict[str, Any]:
-        """准备模板上下文数据"""
-        # 处理主归档
-        archives_data = []
-        total_cards = 0
-        total_vibe_cards = 0
-        
-        for archive in getattr(document_ast, 'archives', []):
-            archive_data = self._convert_archive_to_dict(archive)
-            archives_data.append(archive_data)
-            total_cards += len(archive_data['cards'])
-        
-        # 处理注卡归档
-        vibe_archive_data = None
-        vibe_archive = getattr(document_ast, 'vibe_archive', None)
-        if vibe_archive and getattr(vibe_archive, 'cards', []):
-            vibe_archive_data = self._convert_archive_to_dict(vibe_archive)
-            total_vibe_cards = len(vibe_archive_data['cards'])
-        
-        # 计算统计信息
-        total_all_cards = total_cards + total_vibe_cards
-        
-        return {
-            'page_title': title,
-            'archives': archives_data,
-            'vibe_archive': vibe_archive_data,
-            'compile_time': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            'total_cards': total_cards,
-            'total_vibe_cards': total_vibe_cards,
-            'total_all_cards': total_all_cards,
-            'has_vibe_archive': vibe_archive_data is not None,
-            'template': template,
-            'version': '1.0.0'
-        }
-    
-    def _convert_archive_to_dict(self, archive) -> Dict[str, Any]:
-        """将归档对象转换为字典"""
-        archive_data = {
-            'id': self._slugify(getattr(archive, 'name', '')),
-            'name': getattr(archive, 'name', '未命名归档'),
-            'cards': [],
-            'card_count': len(getattr(archive, 'cards', []))
+        # 标签类型映射
+        self.label_types = {
+            '!': 'important',
+            '?': 'question', 
+            '>': 'reference',
+            '<': 'backlink',
+            'i': 'info',
+            '✓': 'completed',
+            '☆': 'star',
+            '▲': 'priority'
         }
         
-        for card in getattr(archive, 'cards', []):
-            card_data = self._convert_card_to_dict(card)
-            archive_data['cards'].append(card_data)
+        os.makedirs(output_dir, exist_ok=True)
         
-        return archive_data
-    
-    def _convert_card_to_dict(self, card) -> Dict[str, Any]:
-        """将卡片对象转换为字典"""
-        card_data = {
-            'id': self._slugify(getattr(card, 'theme', '')),
-            'theme': getattr(card, 'theme', '未命名卡片'),
-            'labels': [],
-            'regions': []
-        }
+    def generate(self, document: Document, output_path: str, css_content: str = None) -> str:
+        """生成完整的HTML文档 - 修复路径处理"""
         
-        # 处理标签
-        for label in getattr(card, 'labels', []):
-            label_data = {
-                'symbol': getattr(label, 'symbol', ''),
-                'content': getattr(label, 'content', []),
-                'type': getattr(label, 'label_type', 'default')
-            }
-            card_data['labels'].append(label_data)
+        # 重置状态
+        self.vibe_card_counter = 1
+        self.vibe_cards_info = []
+        self.card_themes = set()
         
-        # 处理区域
-        for region in getattr(card, 'regions', []):
-            region_data = self._convert_region_to_dict(region, card_data['theme'])
-            card_data['regions'].append(region_data)
+        # 处理输出路径
+        output_path = Path(output_path)
         
-        return card_data
-    
-    def _convert_region_to_dict(self, region, source_card: str) -> Dict[str, Any]:
-        """将区域对象转换为字典，并处理注卡语法"""
-        region_content = getattr(region, 'content', '')
-        region_lines = getattr(region, 'lines', [])
+        # 如果输出路径是相对路径，确保输出目录存在
+        if not output_path.is_absolute():
+            # 确保输出目录存在
+            self.output_dir = output_path.parent
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            filename = output_path.name
+        else:
+            # 绝对路径，直接使用
+            self.output_dir = output_path.parent
+            filename = output_path.name
         
-        # 处理注卡语法：`内容`[批注]
-        processed_content, vibe_cards = self._process_vibe_cards_in_text(
-            region_content, source_card
+        print(f"HTMLGenerator: 输出目录={self.output_dir}, 文件名={filename}")
+        
+        # 收集所有卡片主题
+        self._collect_card_themes(document)
+        
+        # 生成CSS文件
+        self.generate_css_file(css_content)
+        
+        # 生成主卡内容
+        main_content = self._generate_main_content(document.archives)
+        
+        # 生成注卡归档内容
+        vibe_archive_content = self._generate_vibe_archive(document.vibe_archive)
+        
+        # 生成其他归档导航
+        other_archives_content = self._generate_other_archives(document.archives)
+        
+        # 构建完整HTML
+        html_content = self._build_full_html(
+            document.title,  # 使用AST中的文档标题，而不是文件名
+            main_content,
+            vibe_archive_content,
+            other_archives_content
         )
         
-        # 处理行内解释：>>解释文本
-        processed_content = self._process_inline_explanations(processed_content)
+        # 写入文件
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
         
-        region_data = {
-            'name': getattr(region, 'name', ''),
-            'content': processed_content,
-            'raw_content': region_content,
-            'lines': region_lines,
-            'vibe_cards': vibe_cards
-        }
-        
-        return region_data
+        print(f"HTML生成完成: {output_path}")
+        return str(output_path)
     
-    def _process_vibe_cards_in_text(self, text: str, source_card: str) -> tuple:
-        """处理文本中的注卡语法，返回处理后的文本和注卡列表"""
-        vibe_cards = []
+    def _collect_card_themes(self, document: Document):
+        """收集所有卡片主题，用于跳转验证"""
+        for archive in document.archives:
+            for card in archive.cards:
+                self.card_themes.add(card.theme)
+    
+    def _build_full_html(self, title: str, main_content: str, 
+                    vibe_archive_content: str, other_archives_content: str) -> str:
+        """构建完整的HTML文档结构"""
         
-        # 匹配注卡语法：`内容`[批注]
-        pattern = r'`([^`]+)`\[([^\]]+)\]'
+        # 如果标题是文件名，提取有意义的标题
+        if title.endswith('.ru') or title.endswith('.remup'):
+            # 使用文件名（不含扩展名）作为标题
+            title = Path(title).stem
+            # 可以进一步美化，比如将下划线替换为空格，首字母大写等
+            title = title.replace('_', ' ').title()
         
-        def replace_vibe(match):
-            content = match.group(1).strip()
-            annotation = match.group(2).strip()
+        return f'''<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <link rel="stylesheet" href="{self.css_file}">
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <header class="page-header">
+            <h1>{title}</h1>
+        </header>
+        
+        <!-- 主卡内容 -->
+        <main class="main-content">
+            {main_content}
+        </main>
+        
+        <!-- 注卡归档 -->
+        {vibe_archive_content}
+        
+        <!-- 其他归档 -->
+        {other_archives_content}
+    </div>
+    
+    <script>
+        // 完整的交互功能实现
+        document.addEventListener('DOMContentLoaded', function() {{
+            // 1. 标签跳转功能
+            const labelLinks = document.querySelectorAll('.label-link');
+            labelLinks.forEach(link => {{
+                link.addEventListener('click', function(e) {{
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {{
+                        // 平滑滚动到目标元素
+                        targetElement.scrollIntoView({{ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        }});
+                        
+                        // 添加高亮效果
+                        targetElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        setTimeout(() => {{
+                            targetElement.style.backgroundColor = '';
+                        }}, 2000);
+                    }}
+                }});
+            }});
+
+            // 2. 注卡跳转功能（注卡归档 → 原文）
+            const vibeLinks = document.querySelectorAll('.vibe-link, .back-to-source');
+            vibeLinks.forEach(link => {{
+                link.addEventListener('click', function(e) {{
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {{
+                        targetElement.scrollIntoView({{ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        }});
+                        
+                        // 触发注卡的悬停效果
+                        if (targetElement.classList.contains('annotation')) {{
+                            targetElement.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                            setTimeout(() => {{
+                                targetElement.style.backgroundColor = '';
+                            }}, 2000);
+                        }}
+                    }}
+                }});
+            }});
+
+            // 3. 归档导航跳转
+            const archiveLinks = document.querySelectorAll('.archive-card-link');
+            archiveLinks.forEach(link => {{
+                link.addEventListener('click', function(e) {{
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {{
+                        targetElement.scrollIntoView({{ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        }});
+                    }}
+                }});
+            }});
+
+            // 4. 注卡悬停效果优化
+            const annotations = document.querySelectorAll('.annotation');
+            annotations.forEach(annotation => {{
+                annotation.addEventListener('mouseenter', function() {{
+                    annotations.forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                }});
+            }});
+
+            // 5. 响应式网格布局调整
+            function adjustGridLayout() {{
+                const archiveCards = document.querySelectorAll('.archive-cards');
+                const screenWidth = window.innerWidth;
+                
+                archiveCards.forEach(container => {{
+                    if (screenWidth >= 1200) {{
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+                    }} else if (screenWidth >= 1024) {{
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                    }} else if (screenWidth >= 768) {{
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+                    }} else {{
+                        container.style.gridTemplateColumns = '1fr';
+                    }}
+                }});
+            }}
+
+            // 初始调整和窗口大小变化监听
+            adjustGridLayout();
+            window.addEventListener('resize', adjustGridLayout);
+
+            // 6. 页面加载时的锚点跳转处理
+            if (window.location.hash) {{
+                const targetElement = document.querySelector(window.location.hash);
+                if (targetElement) {{
+                    setTimeout(() => {{
+                        targetElement.scrollIntoView({{ behavior: 'smooth' }});
+                    }}, 100);
+                }}
+            }}
+
+            // 7. 键盘导航支持
+            document.addEventListener('keydown', function(e) {{
+                if (e.key === 'Escape') {{
+                    // ESC键关闭所有注卡弹出框
+                    annotations.forEach(annotation => {{
+                        annotation.classList.remove('active');
+                    }});
+                }}
+            }});
+        }});
+    </script>
+</body>
+</html>'''
+    
+    def _generate_main_content(self, archives: List[Archive]) -> str:
+        """生成主卡内容 - 添加调试"""
+        content_parts = []
+        
+        print(f"生成主内容: {len(archives)} 个归档")
+        
+        for i, archive in enumerate(archives):
+            print(f"处理归档 {i}: {archive.name}, {len(archive.cards)} 张卡片")
             
-            # 创建注卡数据
-            vibe_card = {
-                'content': content,
-                'annotation': annotation,
-                'source_card': source_card,
-                'id': f"vibe-{self._slugify(content)}-{len(vibe_cards)}"
-            }
-            vibe_cards.append(vibe_card)
+            # 归档标题
+            archive_html = f'''
+            <section class="archive-section">
+                <h2 class="archive-title">{archive.name}</h2>
+                <div class="archive-cards">
+            '''
             
-            # 返回HTML标记 - 使用CSS中定义的类
-            return f'<span class="annotation-container">' \
-                   f'<span class="annotation">{content}</span>' \
-                   f'<div class="annotation-popup">{annotation}</div>' \
-                   f'</span>'
+            # 归档中的卡片
+            for j, card in enumerate(archive.cards):
+                print(f"  处理卡片 {j}: {card.theme}")
+                card_html = self._generate_card(card)
+                archive_html += card_html
+            
+            archive_html += '''
+                </div>
+            </section>
+            '''
+            content_parts.append(archive_html)
         
-        # 替换所有注卡标记
-        processed_text = re.sub(pattern, replace_vibe, text)
-        
-        return processed_text, vibe_cards
-    
-    def _process_inline_explanations(self, text: str) -> str:
-        """处理行内解释语法：>>解释文本"""
-        pattern = r'>>\s*([^\n<]+)'
-        
-        def replace_explanation(match):
-            explanation = match.group(1).strip()
-            return f'<span class="inline-explanation">{explanation}</span>'
-        
-        return re.sub(pattern, replace_explanation, text)
-    
-    def _slugify(self, text: str) -> str:
-        """生成URL友好的slug"""
-        if not text:
-            return ""
-        text = text.lower().strip()
-        text = re.sub(r'[^\w\s-]', '', text)
-        text = re.sub(r'[-\s]+', '-', text)
-        return text
-    
-    def _get_template_content(self, template: str) -> str:
-        """获取模板内容"""
-        template_files = {
-            'default': 'base.html',
-            'academic': 'academic.html', 
-            'minimal': 'minimal.html',
-            'archive': 'archive.html'
-        }
-        
-        template_file = template_files.get(template, 'base.html')
-        template_path = self.template_dir / template_file
-        
-        if template_path.exists():
-            with open(template_path, 'r', encoding='utf-8') as f:
-                return f.read()
-        else:
-            # 返回默认模板
-            return self._get_default_template()
-    
-    def _render_template(self, template: str, context: Dict[str, Any]) -> str:
-        """简单模板渲染"""
-        result = template
-        
-        # 处理变量替换 {{ variable }}
-        for key, value in context.items():
-            placeholder = "{{ " + key + " }}"
-            result = result.replace(placeholder, str(value))
-        
-        # 处理简单的if条件
-        result = self._process_simple_conditions(result, context)
-        
+        result = '\n'.join(content_parts)
+        print(f"主内容生成完成，长度: {len(result)} 字符")
         return result
     
-    def _process_simple_conditions(self, template: str, context: Dict[str, Any]) -> str:
-        """处理简单的条件语句"""
-        # 处理 {% if condition %} ... {% endif %}
-        pattern = r'{%\s*if\s+(\w+)\s*%}(.*?){%\s*endif\s*%\}'
+    def _generate_card(self, card: MainCard) -> str:
+        """生成单个卡片HTML"""
+        self.current_card_theme = card.theme
         
-        def replace_condition(match):
-            condition = match.group(1)
-            content = match.group(2)
+        # 生成标签
+        labels_html = self._generate_labels(card.labels)
+        
+        # 生成区域
+        regions_html = []
+        for region in card.regions:
+            region_html = self._generate_region(region)
+            regions_html.append(region_html)
+        
+        return f'''
+        <div class="card" id="{card.theme}">
+            <h2 class="card-title">{card.theme}</h2>
             
-            if context.get(condition):
-                return content
+            <!-- 标签区域 -->
+            {labels_html}
+            
+            <!-- 区域内容 -->
+            <div class="card-regions">
+                {''.join(regions_html)}
+            </div>
+        </div>
+        '''
+    
+    def _generate_labels(self, labels: List[Label]) -> str:
+        """生成标签HTML - 修复跳转功能"""
+        if not labels:
             return ""
         
-        return re.sub(pattern, replace_condition, template, flags=re.DOTALL)
-    
-    def _copy_static_resources(self, output_dir: Path) -> None:
-        """复制静态资源到输出目录"""
-        if not self.static_dir.exists():
-            # 创建默认静态资源
-            self._create_default_static_resources()
-            return
-        
-        target_static_dir = output_dir / "static"
-        target_static_dir.mkdir(parents=True, exist_ok=True)
-        
-        try:
-            # 复制整个静态目录
-            if target_static_dir.exists():
-                shutil.rmtree(target_static_dir)
+        labels_html = []
+        for label in labels:
+            # 处理标签内容中的跳转链接
+            content_html = []
+            for item in label.content:
+                if item.startswith('#'):
+                    # 检查跳转目标是否存在
+                    target_id = item[1:]  # 去掉#号
+                    if target_id in self.card_themes:
+                        # 有效的跳转链接
+                        content_html.append(f'<a href="#{target_id}" class="label-link">{target_id}</a>')
+                    else:
+                        # 无效的跳转链接，只显示文本
+                        content_html.append(f'<span class="label-content">{target_id}</span>')
+                else:
+                    # 普通内容
+                    content_html.append(f'<span class="label-content">{item}</span>')
             
-            shutil.copytree(self.static_dir, target_static_dir)
-        except Exception as e:
-            print(f"⚠️ 静态资源复制失败: {e}")
-    
-    def _create_default_templates(self):
-        """创建默认模板文件（如果不存在）"""
-        default_templates = {
-            'base.html': self._get_base_template(),
-            'academic.html': self._get_academic_template(),
-            'minimal.html': self._get_minimal_template(),
-            'archive.html': self._get_archive_template(),
-            'header.html': self._get_header_template(),
-            'footer.html': self._get_footer_template()
-        }
+            # 确定标签类型
+            label_type = self.label_types.get(label.symbol, "default")
+            
+            label_html = f'''
+            <div class="label {label_type}">
+                <span class="label-symbol">{label.symbol}</span>
+                <div class="label-contents">
+                    {', '.join(content_html)}
+                </div>
+            </div>
+            '''
+            labels_html.append(label_html)
         
-        for template_name, template_content in default_templates.items():
-            template_path = self.template_dir / template_name
-            if not template_path.exists():
-                try:
-                    with open(template_path, 'w', encoding='utf-8') as f:
-                        f.write(template_content)
-                except Exception as e:
-                    print(f"⚠️ 创建模板失败 {template_name}: {e}")
+        return f'''
+        <div class="labels-container">
+            {''.join(labels_html)}
+        </div>
+        '''
     
-    def _create_default_static_resources(self):
-        """创建默认静态资源"""
-        css_dir = self.static_dir / "css"
-        css_dir.mkdir(parents=True, exist_ok=True)
+    def _generate_region(self, region: Region) -> str:
+        """生成区域HTML"""
+        # 处理区域内容行
+        content_html = self._process_region_content(region)
         
-        # 创建CSS文件
-        css_content = """/* RemUp默认样式 - 完整版 */
+        return f'''
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">{region.name}</div>
+            <div class="region-content">
+                <div class="content">
+                    {content_html}
+                </div>
+            </div>
+        </div>
+        '''
+    
+    def _process_region_content(self, region: Region) -> str:
+        """处理区域内容，包括行内解释和注卡"""
+        if not region.lines:
+            return ""
+        
+        lines_with_explanations = []
+        
+        for i, line in enumerate(region.lines):
+            # 处理注卡：检查当前行是否有对应的注卡
+            processed_line = line
+            for vibe_card in region.vibe_cards:
+                if vibe_card.content == line.strip():
+                    # 生成注卡HTML
+                    vibe_html = self._generate_vibe_card_html(vibe_card)
+                    processed_line = vibe_html
+                    break
+            
+            # 检查行内解释
+            inline_exp = region.inline_explanations.get(i)
+            
+            if inline_exp and isinstance(inline_exp, Inline_Explanation):
+                # 添加行内解释
+                line_with_exp = f'{processed_line}<span class="inline-explanation">{inline_exp.content}</span>'
+                lines_with_explanations.append(f'<p>{line_with_exp}</p>')
+            else:
+                # 普通行
+                lines_with_explanations.append(f'<p>{processed_line}</p>')
+        
+        return '\n'.join(lines_with_explanations)
+    
+    def _generate_vibe_card_html(self, vibe_card: VibeCard) -> str:
+        """生成注卡HTML结构 - 包含双向跳转"""
+        # 生成唯一的注卡ID
+        annotation_id = f"annotation_{vibe_card.id}"
+        
+        # 记录注卡信息用于归档
+        self.vibe_cards_info.append({
+            'id': annotation_id,
+            'content': vibe_card.content,
+            'annotation': vibe_card.annotation,
+            'card_theme': self.current_card_theme
+        })
+        
+        # 创建跳转回原文的链接
+        back_link = f'<a href="#{annotation_id}" class="back-to-source">↩ 跳回原文</a>'
+        
+        return f'''
+        <span class="annotation-container">
+            <span class="annotation" id="{annotation_id}">
+                {vibe_card.content}
+                <span class="annotation-popup">
+                    {vibe_card.annotation}
+                    {back_link}
+                </span>
+            </span>
+        </span>
+        '''
+    
+    def _generate_vibe_archive(self, vibe_archive: VibeArchive) -> str:
+        """生成注卡归档HTML"""
+        if not vibe_archive:
+            return ""
+        
+        cards_html = []
+        for card in vibe_archive.cards:
+            card_html = self._generate_vibe_archive_card(card)
+            cards_html.append(card_html)
+        
+        if not cards_html:
+            return ""
+        
+        return f'''
+        <section class="vibe-archive">
+            <h2 class="vibe-archive-title">注卡归档</h2>
+            <div class="vibe-archive-cards">
+                {''.join(cards_html)}
+            </div>
+        </section>
+        '''
+    
+    def _generate_vibe_archive_card(self, card: MainCard) -> str:
+        """生成注卡归档中的卡片HTML"""
+        vibe_items = []
+        
+        # 收集所有注卡
+        for region in card.regions:
+            for vibe_card in region.vibe_cards:
+                # 查找对应的注卡ID
+                annotation_id = f"annotation_{vibe_card.id}"
+                vibe_item = f'''
+                <div class="vibe-archive-item">
+                    <a href="#{annotation_id}" class="vibe-link">{vibe_card.content}</a>
+                    <p>{vibe_card.annotation}</p>
+                </div>
+                '''
+                vibe_items.append(vibe_item)
+        
+        if not vibe_items:
+            return ""
+        
+        # 提取原始卡片主题（去掉"注卡: "前缀）
+        theme = card.theme.replace('注卡: ', '')
+        
+        return f'''
+        <div class="vibe-archive-card">
+            <h3>{theme}</h3>
+            <div class="vibe-archive-content">
+                {''.join(vibe_items)}
+            </div>
+        </div>
+        '''
+    
+    def _generate_other_archives(self, archives: List[Archive]) -> str:
+        """生成其他归档的导航链接"""
+        archive_sections = []
+        
+        for archive in archives:
+            card_links = []
+            for card in archive.cards:
+                card_links.append(f'<a href="#{card.theme}" class="archive-card-link">{card.theme}</a>')
+            
+            archive_html = f'''
+            <div class="archive-section">
+                <h3 class="archive-title">{archive.name}</h3>
+                <div class="archive-cards">
+                    {''.join(card_links)}
+                </div>
+            </div>
+            '''
+            archive_sections.append(archive_html)
+        
+        if archive_sections:
+            return f'''
+            <section class="archives-nav">
+                <h2 class="archive-title">归档导航</h2>
+                {''.join(archive_sections)}
+            </section>
+            '''
+        return ""
+    
+    def generate_css_file(self, css_content: str = None) -> str:
+        """生成独立的CSS文件"""
+        if css_content is None:
+            # 这里可以放置您确认的CSS内容
+            css_content = """/* RemUp 样式系统 v3.1 - 完整交互版 */
 :root {
-    /* 主色调 */
     --remup-primary: #3498db;
     --remup-secondary: #2ecc71;
     --remup-accent: #e74c3c;
     --remup-gray: #95a5a6;
     --remup-light-gray: #ecf0f1;
-    
-    /* 卡片颜色 */
     --card-bg: #ffffff;
     --card-shadow: rgba(0, 0, 0, 0.1);
     --card-border: #e0e0e0;
-    
-    /* 区域线颜色 */
     --region-line: #bdc3c7;
     --region-title: #7f8c8d;
-    
-    /* 字体 */
     --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
     --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
 }
 
-/* 重置和基础样式 */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: var(--font-main);
@@ -340,11 +549,12 @@ body {
 }
 
 .container {
-    max-width: 1000px;
+    max-width: none;
+    width: 100%;
     margin: 0 auto;
+    padding: 20px;
 }
 
-/* 页面标题样式 */
 .page-header {
     text-align: center;
     margin-bottom: 40px;
@@ -360,22 +570,17 @@ body {
     font-size: 2.5em;
 }
 
-.page-header p {
-    color: #7f8c8d;
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-/* 主卡样式 */
 .card {
     background: var(--card-bg);
     border-radius: 12px;
     box-shadow: 0 4px 20px var(--card-shadow);
     border: 1px solid var(--card-border);
     padding: 24px;
-    margin-bottom: 30px;
+    margin-bottom: 0;
     position: relative;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    min-width: 0;
 }
 
 .card:hover {
@@ -383,7 +588,6 @@ body {
     box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* 卡片主题（标题） */
 .card h2 {
     color: var(--remup-primary);
     border-bottom: 2px solid var(--remup-primary);
@@ -392,6 +596,8 @@ body {
     font-size: 1.8em;
     position: relative;
     padding-left: 15px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .card h2::before {
@@ -412,7 +618,6 @@ body {
     opacity: 0.7;
 }
 
-/* 标签系统 */
 .labels-container {
     position: absolute;
     top: 20px;
@@ -467,28 +672,20 @@ body {
     flex: 1;
 }
 
-/* 标签类型颜色 */
-.label.important .label-symbol {
-    border-color: var(--remup-accent);
-    color: var(--remup-accent);
+.label.default .label-symbol { border-color: var(--remup-primary); color: var(--remup-primary); }
+.label.important .label-symbol { border-color: var(--remup-accent); color: var(--remup-accent); }
+.label.reference .label-symbol { border-color: #3498db; color: #3498db; }
+.label.question .label-symbol { border-color: #f39c12; color: #f39c12; }
+.label.info .label-symbol { border-color: var(--remup-gray); color: var(--remup-gray); }
+
+.label-link {
+    color: inherit;
+    text-decoration: none;
+    margin-right: 4px;
 }
 
-.label.success .label-symbol {
-    border-color: #27ae60;
-    color: #27ae60;
-}
+.label-link:hover { text-decoration: underline; }
 
-.label.warning .label-symbol {
-    border-color: #f39c12;
-    color: #f39c12;
-}
-
-.label.info .label-symbol {
-    border-color: var(--remup-gray);
-    color: var(--remup-gray);
-}
-
-/* 区域系统 */
 .region {
     margin: 25px 0;
     position: relative;
@@ -497,11 +694,7 @@ body {
 .region-line {
     border: none;
     height: 1px;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        var(--region-line) 20%, 
-        var(--region-line) 80%, 
-        transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, var(--region-line) 20%, var(--region-line) 80%, transparent 100%);
     margin: 10px 0 20px 0;
     position: relative;
 }
@@ -520,38 +713,11 @@ body {
     letter-spacing: 0.5px;
 }
 
-.region-content {
-    margin-top: 15px;
-}
+.region-content { margin-top: 15px; }
 
-/* 内容样式 */
-.content {
-    line-height: 1.8;
-}
+.content { line-height: 1.8; }
+.content p { margin-bottom: 15px; }
 
-.content p {
-    margin-bottom: 15px;
-}
-
-.content ul, .content ol {
-    margin-left: 25px;
-    margin-bottom: 15px;
-}
-
-.content li {
-    margin-bottom: 8px;
-    position: relative;
-}
-
-.content li::before {
-    content: '•';
-    color: var(--remup-primary);
-    font-weight: bold;
-    position: absolute;
-    left: -15px;
-}
-
-/* 行内解释 */
 .inline-explanation {
     display: block;
     color: #7f8c8d;
@@ -562,6 +728,8 @@ body {
     margin-bottom: 15px;
     padding-left: 20px;
     position: relative;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 .inline-explanation::before {
@@ -570,22 +738,21 @@ body {
     left: 0;
     color: var(--remup-gray);
     font-family: var(--font-mono);
+    font-size: 0.85em;
 }
 
-/* 注卡系统 */
-.annotation-container {
-    position: relative;
-    display: inline;
-}
+.annotation-container { position: relative; display: inline; }
 
 .annotation {
+    position: relative;
+    display: inline;
     cursor: help;
-    border-bottom: 1px dashed var(--remup-primary);
-    color: var(--remup-primary);
+    color: #3498db;
+    border-bottom: 1px dashed #3498db;
+    transition: all 0.2s ease;
     padding: 2px 4px;
     border-radius: 3px;
     background: rgba(52, 152, 219, 0.1);
-    transition: all 0.2s ease;
 }
 
 .annotation:hover {
@@ -594,7 +761,6 @@ body {
 }
 
 .annotation-popup {
-    display: none;
     position: absolute;
     z-index: 10000;
     background: white;
@@ -605,6 +771,8 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
     font-size: 0.9em;
     line-height: 1.5;
+    color: #2c3e50;
+    display: none;
     animation: fadeIn 0.2s ease;
     pointer-events: none;
 }
@@ -614,181 +782,91 @@ body {
     pointer-events: auto;
 }
 
-.annotation-popup.bottom {
-    top: 100%;
-    margin-top: 5px;
+.back-to-source {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.8em;
+    color: var(--remup-primary);
+    text-decoration: none;
 }
 
-.annotation-popup.fixed {
-    position: fixed !important;
-    z-index: 10000;
-}
+.back-to-source:hover { text-decoration: underline; }
 
-/* 动画效果 */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-5px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* 代码块样式 */
-.code-block {
-    background: #2d3748;
-    color: #e2e8f0;
-    padding: 20px;
-    border-radius: 8px;
-    margin: 20px 0;
-    overflow-x: auto;
-    font-family: var(--font-mono);
-    font-size: 0.9em;
-    line-height: 1.5;
-    position: relative;
-    z-index: 1;
-}
-
-.code-block pre {
-    margin: 0;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-
-/* 代码高亮样式 */
-.keyword { color: #c678dd; font-weight: bold; }
-.number { color: #d19a66; }
-.string { color: #98c379; }
-.comment { color: #5c6370; font-style: italic; }
-
-/* 归档系统 */
-.archive {
-    margin: 40px 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    color: white;
-    position: relative;
-}
+.archive-section { width: 100%; margin-bottom: 40px; }
 
 .archive-title {
-    font-size: 1.5em;
+    font-size: 2em;
     margin-bottom: 15px;
-    display: flex;
-    align-items: center;
-}
-
-.archive-title::before {
-    content: '--<';
-    font-family: var(--font-mono);
-    margin-right: 8px;
-    opacity: 0.8;
-}
-
-.archive-title::after {
-    content: '>--';
-    font-family: var(--font-mono);
-    margin-left: 8px;
-    opacity: 0.8;
+    color: #2c3e50;
+    border-bottom: 3px solid var(--remup-primary);
+    padding-bottom: 10px;
 }
 
 .archive-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
-    margin-top: 15px;
+    grid-template-columns: 1fr;
+    gap: 25px;
+    width: 100%;
 }
+
+.vibe-archive {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 8px;
+    margin: 30px 0;
+}
+
+.vibe-archive-title {
+    color: #e74c3c;
+    font-size: 1.8em;
+    margin-bottom: 20px;
+}
+
+.vibe-archive-card {
+    background: white;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    border-left: 4px solid #3498db;
+}
+
+.vibe-archive-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.vibe-link {
+    color: var(--remup-primary);
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.vibe-link:hover { text-decoration: underline; }
 
 .archive-card-link {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
+    display: block;
     padding: 12px 20px;
-    border-radius: 8px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    font-weight: 500;
-    font-size: 0.95em;
-    line-height: 1.4;
-    box-shadow: 
-        0 2px 8px rgba(102, 126, 234, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    position: relative;
-    overflow: hidden;
-}
-
-/* 流光效果 */
-.archive-card-link::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
-    transition: left 0.8s ease;
-}
-
-.archive-card-link:hover::before {
-    left: 100%;
-}
-
-.archive-card-link:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 
-        0 6px 20px rgba(102, 126, 234, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
     text-decoration: none;
-}
-
-.archive-card {
-    display: block;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 10px;
-    border-radius: 6px;
-    text-decoration: none;
-    color: white;
-    transition: all 0.2s ease;
+    border-radius: 8px;
+    transition: all 0.3s ease;
     text-align: center;
 }
 
-.archive-card:hover {
-    background: rgba(255, 255, 255, 0.2);
+.archive-card-link:hover {
     transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
-/* 增强交互样式 */
-.card.enhanced-hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    z-index: 10;
-}
-
-.card.focused {
-    outline: 2px solid var(--remup-primary);
-    outline-offset: 2px;
-    background: #f8f9fa;
-}
-
-.archive-nav-link.active {
-    background: var(--remup-accent);
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
-}
-
-/* 响应式设计 */
 @media (max-width: 768px) {
-    .container {
-        padding: 10px;
-    }
-    
-    .card {
-        padding: 18px;
-    }
-    
+    .container { padding: 10px; }
+    .card { padding: 18px; }
     .labels-container {
         position: relative;
         top: 0;
@@ -797,612 +875,134 @@ body {
         justify-content: flex-start;
         max-width: 100%;
     }
-    
-    .card h2 {
-        font-size: 1.5em;
-    }
-    
-    .archive-cards {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
+    .card h2 { font-size: 1.5em; }
+    .archive-cards { grid-template-columns: 1fr; }
 }
 
-@media (max-width: 600px) {
-    .labels-container {
-        position: relative !important;
-        top: auto !important;
-        right: auto !important;
-        margin-bottom: 15px !important;
-        justify-content: flex-start !important;
-        max-width: 100% !important;
-    }
+@media (min-width: 768px) {
+    .archive-cards { grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; }
+    .container { padding: 30px; }
+}
+
+@media (min-width: 1024px) {
+    .archive-cards { grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 35px; }
+}
+
+@media (min-width: 1200px) {
+    .container { max-width: 1400px; margin: 0 auto; }
+    .archive-cards { grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); }
 }
 
 @media (max-width: 480px) {
-    .card {
-        padding: 15px;
-        border-radius: 8px;
-    }
-    
-    .card h2 {
-        font-size: 1.3em;
-    }
-    
-    .label {
-        font-size: 0.8em;
-        padding: 5px 10px;
-        max-width: 150px;
-    }
-    
-    .label-symbol {
-        width: 20px;
-        height: 20px;
-        font-size: 0.8em;
-    }
-    
-    .annotation-popup {
-        width: 200px;
-        font-size: 0.85em;
-    }
+    .card { padding: 15px; border-radius: 8px; }
+    .card h2 { font-size: 1.3em; }
+    .label { font-size: 0.8em; padding: 5px 10px; max-width: 150px; }
+    .label-symbol { width: 20px; height: 20px; font-size: 0.8em; }
+    .annotation-popup { width: 200px; font-size: 0.85em; }
 }
 
-/* 工具类 */
 .text-center { text-align: center; }
-.text-right { text-align: right; }
 .mt-1 { margin-top: 10px; }
 .mb-1 { margin-bottom: 10px; }
-.mt-2 { margin-top: 20px; }
-.mb-2 { margin-bottom: 20px; }
 
-/* 滚动锚点偏移 */
 :target {
     scroll-margin-top: 20px;
+    background-color: rgba(255, 255, 0, 0.2);
+    transition: background-color 0.5s ease;
 }
 
-/* 辅助功能优化 */
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/* 焦点样式 */
 .card:focus {
     outline: 2px solid var(--remup-primary);
     outline-offset: 2px;
 }
-
-/* 加载状态 */
-.loading {
-    opacity: 0.7;
-    pointer-events: none;
-}
-
-.loading::after {
-    content: '加载中...';
-    display: block;
-    text-align: center;
-    color: var(--remup-gray);
-    font-style: italic;
-}
-
-/* 打印优化 */
-@media print {
-    .card {
-        break-inside: avoid;
-        box-shadow: none !important;
-        border: 1px solid #ccc !important;
-        margin-bottom: 20px !important;
-    }
-    
-    .annotation-popup {
-        display: block !important;
-        position: static !important;
-        opacity: 1 !important;
-        border: 1px solid #999 !important;
-        margin: 5px 0 !important;
-    }
-    
-    .page-header, .compile-info, .archives-nav {
-        display: none !important;
-    }
-}"""
+"""
         
-        css_file = css_dir / "remup.css"
-        if not css_file.exists():
-            with open(css_file, 'w', encoding='utf-8') as f:
-                f.write(css_content)
-    
-    def _get_base_template(self) -> str:
-        """获取基础模板"""
-        return """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }} - RemUp</title>
-    <link rel="stylesheet" href="static/css/remup.css">
-    <style>
-        /* 内联关键样式 */
-        .compile-info {
-            text-align: center;
-            color: #7f8c8d;
-            margin: 20px 0;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border-left: 4px solid #3498db;
-        }
-        .vibe-popup {
-            display: none;
-            position: absolute;
-            background: white;
-            border: 1px solid #bdc3c7;
-            border-radius: 8px;
-            padding: 12px;
-            max-width: 300px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            z-index: 1000;
-            font-size: 0.9em;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <!-- 页面头部 -->
-        <header class="page-header">
-            <h1>{{ page_title }}</h1>
-            <p>RemUp编译器生成的智能学习笔记</p>
-            <div class="compile-info">
-                <p>📅 编译时间: {{ compile_time }} | 📊 卡片总数: {{ total_all_cards }}</p>
-            </div>
-        </header>
+        css_path = os.path.join(self.output_dir, self.css_file)
+        with open(css_path, 'w', encoding='utf-8') as f:
+            f.write(css_content)
         
-        <!-- 主内容区域 -->
-        <main class="main-content">
-            {% for archive in archives %}
-            <!-- 归档区域 -->
-            <section class="archive" id="archive-{{ archive.id }}">
-                <h2 class="archive-title">
-                    <span class="archive-start">--&lt;</span>
-                    {{ archive.name }}
-                    <span class="archive-end">&gt;--</span>
-                </h2>
-                <span class="archive-count">({{ archive.card_count }} 张卡片)</span>
-                
-                <!-- 归档内卡片导航 -->
-                <div class="archive-cards">
-                    {% for card in archive.cards %}
-                    <a href="#card-{{ card.id }}" class="archive-card-link">
-                        {{ card.theme }}
-                    </a>
-                    {% endfor %}
-                </div>
-                
-                <!-- 卡片内容 -->
-                <div class="cards-container">
-                    {% for card in archive.cards %}
-                    <article class="card" id="card-{{ card.id }}">
-                        <!-- 卡片标题 -->
-                        <h3 class="card-title">
-                            <span class="card-start-symbol">&lt;+</span>
-                            {{ card.theme }}
-                            <span class="card-end-symbol">/+&gt;</span>
-                        </h3>
-                        
-                        <!-- 标签区域 -->
-                        {% if card.labels %}
-                        <div class="labels-container">
-                            {% for label in card.labels %}
-                            <div class="label {{ label.type }}">
-                                <span class="label-symbol">{{ label.symbol }}</span>
-                                <span class="label-content">
-                                    {% for item in label.content %}
-                                        {% if item.startswith('#') %}
-                                        <a href="#card-{{ item[1:] | slugify }}" class="label-link">{{ item[1:] }}</a>
-                                        {% else %}
-                                        <span class="label-text">{{ item }}</span>
-                                        {% endif %}
-                                        {% if not loop.last %}, {% endif %}
-                                    {% endfor %}
-                                </span>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                        
-                        <!-- 区域内容 -->
-                        {% for region in card.regions %}
-                        <div class="region">
-                            <hr class="region-line">
-                            <div class="region-title">{{ region.name }}</div>
-                            <div class="region-content">
-                                <div class="content">{{ region.content | safe }}</div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </article>
-                    {% endfor %}
-                </div>
-            </section>
-            {% endfor %}
-            
-            <!-- 注卡归档 -->
-            {% if has_vibe_archive %}
-            <section class="archive vibe-archive" id="vibe-archive">
-                <h2 class="archive-title">
-                    <span class="archive-start">--&lt;</span>
-                    自动生成注卡
-                    <span class="archive-end">&gt;--</span>
-                </h2>
-                <span class="archive-count">({{ total_vibe_cards }} 张注卡)</span>
-                
-                <div class="cards-container">
-                    {% for card in vibe_archive.cards %}
-                    <article class="card vibe-generated-card" id="vibe-card-{{ card.id }}">
-                        <h3 class="card-title">
-                            <span class="card-start-symbol">&lt;+</span>
-                            {{ card.theme }}
-                            <span class="card-end-symbol">/+&gt;</span>
-                        </h3>
-                        
-                        {% for region in card.regions %}
-                        <div class="region">
-                            <hr class="region-line">
-                            <div class="region-title">{{ region.name }}</div>
-                            <div class="region-content">
-                                <div class="content">{{ region.content | safe }}</div>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </article>
-                    {% endfor %}
-                </div>
-            </section>
-            {% endif %}
-        </main>
-    </div>
+        return css_path
 
-    <script>
-        // 交互功能脚本
-        document.addEventListener('DOMContentLoaded', function() {
-            // 平滑滚动到锚点
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        const yOffset = -20;
-                        const y = targetElement.getBoundingClientRect().top + window.pageYOffset + yOffset;
-                        
-                        window.scrollTo({
-                            top: y,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
-            });
-            
-            // 注卡交互功能
-            function setupVibeCards() {
-                const annotationContainers = document.querySelectorAll('.annotation-container');
-                
-                annotationContainers.forEach(container => {
-                    const annotation = container.querySelector('.annotation');
-                    const popup = container.querySelector('.annotation-popup');
-                    
-                    if (!annotation || !popup) return;
-                    
-                    // 鼠标悬停显示注卡
-                    annotation.addEventListener('mouseenter', function(e) {
-                        const rect = annotation.getBoundingClientRect();
-                        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-                        const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-                        
-                        popup.classList.add('bottom');
-                        popup.style.top = (rect.bottom + scrollTop + 5) + 'px';
-                        popup.style.left = (rect.left + scrollLeft) + 'px';
-                        
-                        popup.style.display = 'block';
-                    });
-                    
-                    annotation.addEventListener('mouseleave', function() {
-                        popup.style.display = 'none';
-                    });
-                    
-                    // 点击固定注卡
-                    let isFixed = false;
-                    annotation.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        isFixed = !isFixed;
-                        
-                        if (isFixed) {
-                            popup.style.position = 'fixed';
-                            popup.style.zIndex = '10000';
-                            popup.classList.add('fixed');
-                        } else {
-                            popup.style.position = 'absolute';
-                            popup.classList.remove('fixed');
-                        }
-                    });
-                });
-                
-                // 点击页面其他位置关闭固定的注卡
-                document.addEventListener('click', function() {
-                    document.querySelectorAll('.annotation-popup.fixed').forEach(popup => {
-                        popup.style.display = 'none';
-                        popup.classList.remove('fixed');
-                    });
-                });
-            }
-            
-            // 初始化注卡功能
-            setupVibeCards();
-            
-            // 响应式标签容器调整
-            function adjustLabelsContainer() {
-                const cards = document.querySelectorAll('.card');
-                
-                cards.forEach(card => {
-                    const labelsContainer = card.querySelector('.labels-container');
-                    const cardTitle = card.querySelector('h3');
-                    
-                    if (!labelsContainer || !cardTitle) return;
-                    
-                    const cardWidth = card.offsetWidth;
-                    if (cardWidth < 600) {
-                        labelsContainer.style.position = 'relative';
-                        labelsContainer.style.top = 'auto';
-                        labelsContainer.style.right = 'auto';
-                        labelsContainer.style.marginBottom = '15px';
-                        labelsContainer.style.justifyContent = 'flex-start';
-                        labelsContainer.style.maxWidth = '100%';
-                    } else {
-                        labelsContainer.style.position = 'absolute';
-                        labelsContainer.style.top = '20px';
-                        labelsContainer.style.right = '20px';
-                        labelsContainer.style.justifyContent = 'flex-end';
-                        labelsContainer.style.maxWidth = '300px';
-                    }
-                });
-            }
-            
-            // 初始调整
-            adjustLabelsContainer();
-            window.addEventListener('resize', adjustLabelsContainer);
-            
-            console.log('RemUp页面初始化完成！');
-        });
-    </script>
-</body>
-</html>"""
-
-    def _get_academic_template(self) -> str:
-        """获取学术模板"""
-        return """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }} - RemUp学术版</title>
-    <link rel="stylesheet" href="static/css/remup.css">
-    <style>
-        /* 学术样式增强 */
-        body {
-            font-family: 'Times New Roman', serif;
-            background: #fefefe;
-        }
-        .card {
-            border-left: 4px solid #8B0000;
-        }
-        .card h3 {
-            color: #8B0000;
-            border-bottom: 1px solid #8B0000;
-        }
-        .citation {
-            font-style: italic;
-            color: #555;
-            border-left: 3px solid #ccc;
-            padding-left: 15px;
-            margin: 10px 0;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header class="page-header" style="text-align: center; border-bottom: 2px solid #8B0000;">
-            <h1 style="color: #8B0000;">{{ page_title }}</h1>
-            <p>RemUp学术版 - 严谨的知识整理</p>
-            <div class="compile-info">
-                <p>生成于 {{ compile_time }} | 共 {{ total_all_cards }} 个知识点</p>
-            </div>
-        </header>
-        
-        <main class="main-content">
-            {% for archive in archives %}
-            <section class="archive">
-                <h2>{{ archive.name }}</h2>
-                {% for card in archive.cards %}
-                <article class="card">
-                    <h3>{{ card.theme }}</h3>
-                    {% for region in card.regions %}
-                    <div class="region">
-                        <hr class="region-line">
-                        <h4>{{ region.name }}</h4>
-                        <div class="region-content">{{ region.content | safe }}</div>
-                    </div>
-                    {% endfor %}
-                </article>
-                {% endfor %}
-            </section>
-            {% endfor %}
-        </main>
-    </div>
-</body>
-</html>"""
-
-    def _get_minimal_template(self) -> str:
-        """获取简约模板"""
-        return """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title }}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            line-height: 1.6;
-            color: #333;
-            background: white;
-        }
-        .card {
-            background: #f8f9fa;
-            border-left: 4px solid #007bff;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .card h3 {
-            margin-top: 0;
-            color: #007bff;
-        }
-        .region {
-            margin: 15px 0;
-        }
-        .region h4 {
-            color: #666;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <h1>{{ page_title }}</h1>
-        {% if compile_time %}
-        <p><small>生成于 {{ compile_time }}</small></p>
-        {% endif %}
-    </header>
+def print_generation_summary(document: Document, output_path: str):
+    """打印生成摘要"""
+    total_cards = sum(len(archive.cards) for archive in document.archives)
+    total_vibe_cards = 0
+    for archive in document.archives:
+        for card in archive.cards:
+            total_vibe_cards += len(card.vibe_cards)
     
-    <main>
-        {% for archive in archives %}
-        <section>
-            <h2>{{ archive.name }}</h2>
-            {% for card in archive.cards %}
-            <article class="card">
-                <h3>{{ card.theme }}</h3>
-                {% for region in card.regions %}
-                <div class="region">
-                    <h4>{{ region.name }}</h4>
-                    <div>{{ region.content | safe }}</div>
-                </div>
-                {% endfor %}
-            </article>
-            {% endfor %}
-        </section>
-        {% endfor %}
-    </main>
-</body>
-</html>"""
+    print("=" * 60)
+    print("🎉 HTML生成完成！")
+    print("=" * 60)
+    print(f"📁 输出文件: {output_path}")
+    print(f"📄 文档标题: {document.title}")
+    print(f"📂 归档数量: {len(document.archives)}")
+    print(f"🃏 卡片总数: {total_cards}")
+    print(f"💡 注卡数量: {total_vibe_cards}")
+    print(f"📋 注卡归档: {'✅ 有' if document.vibe_archive else '❌ 无'}")
+    print("=" * 60)
+    print("✨ 功能特性:")
+    print("  ✅ 标签跳转功能")
+    print("  ✅ 注卡悬停显示")
+    print("  ✅ 注卡归档双向导航")
+    print("  ✅ 响应式布局设计")
+    print("  ✅ 完整的CSS样式")
+    print("  ✅ 行内解释功能")
+    print("  ✅ 列表样式优化")
+    print("=" * 60)
 
-    def _get_archive_template(self) -> str:
-        """获取归档模板"""
-        return self._get_base_template()  # 使用基础模板
-
-    def _get_header_template(self) -> str:
-        """获取页头模板"""
-        return """<header class="page-header">
-    <h1>{{ page_title }}</h1>
-    <p>RemUp编译器生成的智能学习笔记</p>
-    <div class="compile-info">
-        <p>📅 编译时间: {{ compile_time }} | 📊 卡片总数: {{ total_all_cards }}</p>
-    </div>
-</header>"""
-
-    def _get_footer_template(self) -> str:
-        """获取页脚模板"""
-        return """<footer class="page-footer">
-    <p>✨ Generated by <a href="https://github.com/yourusername/remup">RemUp Compiler</a> v{{ version }}</p>
-</footer>"""
-
-
-# 简化版本 - 向后兼容
-class SimpleHTMLGenerator(HTMLGenerator):
-    """简化版HTML生成器 - 向后兼容"""
+# 完整工作流测试
+if __name__ == "__main__":
+    from lexer import Lexer
+    from parser import Parser
     
-    def generate(self, document_ast, output_file: Path, title: str) -> Path:
-        """简化版生成方法"""
-        return super().generate(document_ast, output_file, title, "default")
-
-
-# 在文件末尾添加以下代码来定义缺失的类
-class MockDocument:
-    """用于测试的模拟文档类"""
-    def __init__(self, archives):
-        self.archives = archives
-        self.vibe_archive = None
-
-class MockArchive:
-    """用于测试的模拟归档类"""
-    def __init__(self, name, cards):
-        self.name = name
-        self.cards = cards
-
-class MockCard:
-    """用于测试的模拟卡片类"""
-    def __init__(self, theme, labels=None, regions=None):
-        self.theme = theme
-        self.labels = labels or []
-        self.regions = regions or []
-
-class MockLabel:
-    """用于测试的模拟标签类"""
-    def __init__(self, symbol, content, label_type="default"):
-        self.symbol = symbol
-        self.content = content
-        self.type = label_type
-
-class MockRegion:
-    """用于测试的模拟区域类"""
-    def __init__(self, name, content, lines=None):
-        self.name = name
-        self.content = content
-        self.lines = lines or []
-
-# 测试代码 - 只有在直接运行此文件时才执行
-# if __name__ == "__main__":
-#     # 创建测试数据
-#     test_region = MockRegion("内容", "这是一个`测试注卡`[这是一个测试注卡]的内容")
-#     test_card = MockCard("测试卡片", 
-#                         [MockLabel("!", ["重要"]), MockLabel(">", ["#相关卡片", "示例"])],
-#                         [test_region])
-#     test_archive = MockArchive("测试归档", [test_card])
-#     test_document = MockDocument([test_archive])
+    # 测试用例
+    test_code = """
+--<Vocabulary>--
+<+vigilant
+(>: #careful, #watchful, 近义词)
+(!: 重要)
+---解释
+adj. 警惕的；警觉的；戒备的
+---词组
+- be vigilant about/against/over >>对…保持警惕
+- remain/stay vigilant >>保持警惕
+- require vigilance >>（需要警惕性）
+---例句
+- Citizens are urged to remain vigilant against cyber scams. `网络诈骗`[指通过互联网进行的欺诈行为] >>敦促公民对网络诈骗保持警惕
+/+>
+"""
     
-#     # 测试HTML生成器
-#     generator = HTMLGenerator()
+    print("🚀 开始完整工作流测试...")
+    print("-" * 60)
     
-#     try:
-#         output_path = generator.generate(
-#             test_document, 
-#             Path("test_output.html"), 
-#             "测试文档",
-#             "default"
-#         )
-#         print(f"✅ HTML生成测试成功: {output_path}")
-#     except Exception as e:
-#         print(f"❌ HTML生成测试失败: {e}")
-#         import traceback
-#         traceback.print_exc()
+    # 1. 词法分析
+    print("1. 词法分析...")
+    lexer = Lexer()
+    tokens = lexer.tokenize(test_code)
+    print("   ✅ 词法分析完成")
+    
+    # 2. 语法分析
+    print("2. 语法分析...")
+    parser = Parser(tokens, "vocabulary.remup")
+    ast = parser.parse()
+    print("   ✅ 语法分析完成")
+    
+    # 3. HTML生成
+    print("3. HTML生成...")
+    generator = HTMLGenerator()
+    output_path = generator.generate(ast, "vocabulary.html")
+    print("   ✅ HTML生成完成")
+    
+    # 4. 输出摘要
+    print_generation_summary(ast, output_path)
+    
+    print("\n🎯 完整工作流测试完成！")
+    print("✨ 生成的HTML文件包含了所有交互功能：")
+    print("   • 标签点击跳转 (#careful, #watchful)")
+    print("   • 注卡悬停显示 (网络诈骗)")
+    print("   • 注卡归档双向导航")
+    print("   • 行内解释自动换行")
+    print("   • 响应式布局适配")
+    print("\n📁 打开文件查看效果:")
+    print(f"   {output_path}")

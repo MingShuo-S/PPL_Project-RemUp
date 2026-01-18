@@ -7,19 +7,19 @@ from typing import List, Optional, Dict, Any  # 添加 Dict, Any 导入
 
 @dataclass
 class VibeCard:
-    """注点节点 - 表示行内批注"""
-    content: str          # 注点内容（被标注的文本）
+    """注卡节点 - 表示行内批注"""
+    id: int               # 注卡对应内容的id，用于往回跳转
+    content: str          # 注卡内容（被标注的文本）
     annotation: str       # 批注内容
     source_card: str =""  # 来源卡片主题（哪个卡片包含这个注点）
-    line_number: int = 0  # 行号（可选，用于精确定位）
     
     def to_dict(self) -> dict:
         """转换为字典格式，用于模板渲染"""
         return {
+            'id': self.id,
             'content': self.content,
             'annotation': self.annotation,
             'source_card': self.source_card,
-            'line_number': self.line_number
         }
 
 @dataclass
@@ -35,6 +35,48 @@ class Label:
             'symbol': self.symbol,
             'content': self.content,
             'type': self.label_type
+        }
+    
+@dataclass
+class Inline_Explanation:
+    """内联解释: 内联解释需要先展开整合到lines中,再对lines做进一步修饰"""
+    line: str        # 内联解释所在行的文本
+    content : str    # 内联解释的内容
+
+    def to_dict(self) -> dict:
+        """转换为字典格式"""
+        return {
+            'line': self.line,
+            'content': self.content
+        }
+    """内联解释要有对应的解释器，
+    如果一行中出现了`>>`符号则说明这行包含内联解释，
+    内联解释可以自动换行, 但不支持输入多行, 
+    输入多行请用注卡"""
+
+@dataclass
+class Rem_List:
+    category: str = "Unordered" # 类别：Unordered Ordered
+    lines: List[str] = field(default_factory=list)
+
+    def to_dict(self) ->dict:
+        """转换为字典格式"""
+        return{
+            'category': self.category,
+            'lines': [line for line in self.lines]
+        }
+    
+@dataclass
+class Code_Block:
+    """代码块节点"""
+    language: str         # 代码语言
+    content: str          # 代码内容
+    
+    def to_dict(self) -> dict:
+        """转换为字典格式"""
+        return {
+            'language': self.language,
+            'content': self.content
         }
 
 @dataclass
@@ -63,7 +105,6 @@ class MainCard:
     labels: List[Label]     # 标签列表
     regions: List[Region]   # 区域列表
     vibe_cards: List[VibeCard] = field(default_factory=list)  # 卡片内的所有注点
-    metadata: Dict[str, Any] = field(default_factory=dict)   # 添加metadata字段
     
     def to_dict(self) -> dict:
         """转换为字典格式"""
@@ -72,20 +113,21 @@ class MainCard:
             'labels': [label.to_dict() for label in self.labels],
             'regions': [region.to_dict() for region in self.regions],
             'vibe_cards': [vc.to_dict() for vc in self.vibe_cards],
-            'metadata': self.metadata  # 添加metadata到字典
         }
 
 @dataclass
 class VibeArchive:
     """注点归档节点 - 存储自动生成的注点主卡"""
-    name: str = "自动生成注点"
+    name: str = "注点归档"
     cards: List[MainCard] = field(default_factory=list)  # 由注点生成的主卡
+    source_lines: List[str] = field(default_factory=list) # 由卡片转换器生成
     
     def to_dict(self) -> dict:
         """转换为字典格式"""
         return {
             'name': self.name,
-            'cards': [card.to_dict() for card in self.cards]
+            'cards': [card.to_dict() for card in self.cards],
+            'sources_lines': [line for line in self.source_lines],
         }
 
 @dataclass
@@ -106,12 +148,14 @@ class Archive:
 @dataclass
 class Document:
     """文档节点（根节点）"""
+    title: str
     archives: List[Archive]                # 归档列表
     vibe_archive: Optional[VibeArchive] = None  # 注点归档（可选）
     
     def to_dict(self) -> dict:
         """转换为字典格式"""
         return {
+            'title': self.title,
             'archives': [archive.to_dict() for archive in self.archives],
             'vibe_archive': self.vibe_archive.to_dict() if self.vibe_archive else None
         }

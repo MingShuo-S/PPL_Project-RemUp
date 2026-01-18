@@ -1,3 +1,10 @@
-# RemUp编译器依赖
-psutil
-setuptools
+# requirements.txt
+# 项目核心依赖
+Jinja2>=3.1.2
+markdown>=3.4.0
+Pygments>=2.15.0
+
+# 开发与测试依赖（通常放在requirements-dev.txt中，见下文）
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0

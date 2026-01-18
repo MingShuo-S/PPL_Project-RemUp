@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>test.ru</title>
+    <link rel="stylesheet" href="RemStyle.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <header class="page-header">
+            <h1>test.ru</h1>
+        </header>
+        
+        <!-- 主卡内容 -->
+        <main class="main-content">
+            
+            <section class="archive-section">
+                <h2 class="archive-title">Vocabulary</h2>
+                <div class="archive-cards">
+            
+        <div class="card" id="example">
+            <h2 class="card-title">example</h2>
+            
+            <!-- 标签区域 -->
+            
+        <div class="labels-container">
+            
+            <div class="label reference">
+                <span class="label-symbol">></span>
+                <div class="label-contents">
+                    <a href="#test" class="label-link">test</a>, <a href="#demo" class="label-link">demo</a>
+                </div>
+            </div>
+            
+            <div class="label important">
+                <span class="label-symbol">!</span>
+                <div class="label-contents">
+                    <span class="label-content">重要</span>
+                </div>
+            </div>
+            
+        </div>
+        
+            
+            <!-- 区域内容 -->
+            <div class="card-regions">
+                
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">解释</div>
+            <div class="region-content">
+                <div class="content">
+                    <p>这是一个示例卡片</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">用法</div>
+            <div class="region-content">
+                <div class="content">
+                    <p></p>
+<p>基本用法</p>
+<p>
+        <span class="annotation-container">
+            <span class="annotation" id="annotation_1">
+                示例
+                <span class="annotation-popup">
+                    这是一个示例注卡
+                    <a href="#annotation_1" class="back-to-source">↩ 跳回原文</a>
+                </span>
+            </span>
+        </span>
+        <span class="inline-explanation">这是行内解释</span></p>
+                </div>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+        
+        <div class="card" id="test">
+            <h2 class="card-title">test</h2>
+            
+            <!-- 标签区域 -->
+            
+        <div class="labels-container">
+            
+            <div class="label reference">
+                <span class="label-symbol">></span>
+                <div class="label-contents">
+                    <a href="#demo" class="label-link">demo</a>
+                </div>
+            </div>
+            
+            <div class="label important">
+                <span class="label-symbol">!</span>
+                <div class="label-contents">
+                    <span class="label-content">示例</span>
+                </div>
+            </div>
+            
+        </div>
+        
+            
+            <!-- 区域内容 -->
+            <div class="card-regions">
+                
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">解释</div>
+            <div class="region-content">
+                <div class="content">
+                    <p>这是一个测试卡片</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">用法</div>
+            <div class="region-content">
+                <div class="content">
+                    <p></p>
+<p>基本用法</p>
+<p>
+        <span class="annotation-container">
+            <span class="annotation" id="annotation_2">
+                测试
+                <span class="annotation-popup">
+                    这是一个测试注卡
+                    <a href="#annotation_2" class="back-to-source">↩ 跳回原文</a>
+                </span>
+            </span>
+        </span>
+        <span class="inline-explanation">这是行内解释</span></p>
+                </div>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+        
+        <div class="card" id="demo">
+            <h2 class="card-title">demo</h2>
+            
+            <!-- 标签区域 -->
+            
+        <div class="labels-container">
+            
+            <div class="label reference">
+                <span class="label-symbol">></span>
+                <div class="label-contents">
+                    <a href="#test" class="label-link">test</a>
+                </div>
+            </div>
+            
+            <div class="label important">
+                <span class="label-symbol">!</span>
+                <div class="label-contents">
+                    <span class="label-content">示例</span>
+                </div>
+            </div>
+            
+        </div>
+        
+            
+            <!-- 区域内容 -->
+            <div class="card-regions">
+                
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">解释</div>
+            <div class="region-content">
+                <div class="content">
+                    <p>这是一个示例卡片</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="region">
+            <hr class="region-line">
+            <div class="region-title">用法</div>
+            <div class="region-content">
+                <div class="content">
+                    <p></p>
+<p>基本用法</p>
+<p>
+        <span class="annotation-container">
+            <span class="annotation" id="annotation_3">
+                示例
+                <span class="annotation-popup">
+                    这是一个示例注卡
+                    <a href="#annotation_3" class="back-to-source">↩ 跳回原文</a>
+                </span>
+            </span>
+        </span>
+        <span class="inline-explanation">这是行内解释</span></p>
+                </div>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+        
+                </div>
+            </section>
+            
+        </main>
+        
+        <!-- 注卡归档 -->
+        
+        <section class="vibe-archive">
+            <h2 class="vibe-archive-title">注卡归档</h2>
+            <div class="vibe-archive-cards">
+                
+        <div class="vibe-archive-card">
+            <h3>example</h3>
+            <div class="vibe-archive-content">
+                
+                <div class="vibe-archive-item">
+                    <a href="#annotation_1" class="vibe-link">示例</a>
+                    <p>这是一个示例注卡</p>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="vibe-archive-card">
+            <h3>test</h3>
+            <div class="vibe-archive-content">
+                
+                <div class="vibe-archive-item">
+                    <a href="#annotation_2" class="vibe-link">测试</a>
+                    <p>这是一个测试注卡</p>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="vibe-archive-card">
+            <h3>demo</h3>
+            <div class="vibe-archive-content">
+                
+                <div class="vibe-archive-item">
+                    <a href="#annotation_3" class="vibe-link">示例</a>
+                    <p>这是一个示例注卡</p>
+                </div>
+                
+            </div>
+        </div>
+        
+            </div>
+        </section>
+        
+        
+        <!-- 其他归档 -->
+        
+            <section class="archives-nav">
+                <h2 class="archive-title">归档导航</h2>
+                
+            <div class="archive-section">
+                <h3 class="archive-title">Vocabulary</h3>
+                <div class="archive-cards">
+                    <a href="#example" class="archive-card-link">example</a><a href="#test" class="archive-card-link">test</a><a href="#demo" class="archive-card-link">demo</a>
+                </div>
+            </div>
+            
+            </section>
+            
+    </div>
+    
+    <script>
+        // 完整的交互功能实现
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 标签跳转功能
+            const labelLinks = document.querySelectorAll('.label-link');
+            labelLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        // 平滑滚动到目标元素
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        // 添加高亮效果
+                        targetElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        setTimeout(() => {
+                            targetElement.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            });
+
+            // 2. 注卡跳转功能（注卡归档 → 原文）
+            const vibeLinks = document.querySelectorAll('.vibe-link, .back-to-source');
+            vibeLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        // 触发注卡的悬停效果
+                        if (targetElement.classList.contains('annotation')) {
+                            targetElement.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                            setTimeout(() => {
+                                targetElement.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }
+                });
+            });
+
+            // 3. 归档导航跳转
+            const archiveLinks = document.querySelectorAll('.archive-card-link');
+            archiveLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }
+                });
+            });
+
+            // 4. 注卡悬停效果优化
+            const annotations = document.querySelectorAll('.annotation');
+            annotations.forEach(annotation => {
+                annotation.addEventListener('mouseenter', function() {
+                    annotations.forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // 5. 响应式网格布局调整
+            function adjustGridLayout() {
+                const archiveCards = document.querySelectorAll('.archive-cards');
+                const screenWidth = window.innerWidth;
+                
+                archiveCards.forEach(container => {
+                    if (screenWidth >= 1200) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+                    } else if (screenWidth >= 1024) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                    } else if (screenWidth >= 768) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+                    } else {
+                        container.style.gridTemplateColumns = '1fr';
+                    }
+                });
+            }
+
+            // 初始调整和窗口大小变化监听
+            adjustGridLayout();
+            window.addEventListener('resize', adjustGridLayout);
+
+            // 6. 页面加载时的锚点跳转处理
+            if (window.location.hash) {
+                const targetElement = document.querySelector(window.location.hash);
+                if (targetElement) {
+                    setTimeout(() => {
+                        targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+            }
+
+            // 7. 键盘导航支持
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    // ESC键关闭所有注卡弹出框
+                    annotations.forEach(annotation => {
+                        annotation.classList.remove('active');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

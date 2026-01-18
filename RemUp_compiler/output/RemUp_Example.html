@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemUp 样式系统 v3.2 - 完整交互样例</title>
+    <link rel="stylesheet" href="RemStyle.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 页面标题 -->
+        <header class="page-header">
+            <h1>RemUp 样式系统 v3.2</h1>
+            <p class="mb-1">完整交互功能展示样例</p>
+        </header>
+        
+        <!-- 归档区域 -->
+        <section class="archive-section">
+            <h2 class="archive-title">编程学习</h2>
+            
+            <div class="archive-cards">
+                <!-- 主卡1：Python函数 -->
+                <div class="card" id="python-function">
+                    <h2 class="card-title">python_function</h2>
+                    
+                    <!-- 标签区域 - 修复跳转功能 -->
+                    <div class="labels-container">
+                        <div class="label important">
+                            <span class="label-symbol">!</span>
+                            <div class="label-contents">
+                                <span class="label-content">重要概念</span>
+                            </div>
+                        </div>
+                        <div class="label info">
+                            <span class="label-symbol">i</span>
+                            <div class="label-contents">
+                                <span class="label-content">编程基础</span>
+                            </div>
+                        </div>
+                        <div class="label question">
+                            <span class="label-symbol">?</span>
+                            <div class="label-contents">
+                                <span class="label-content">如何定义</span>
+                            </div>
+                        </div>
+                        <div class="label reference">
+                            <span class="label-symbol">></span>
+                            <div class="label-contents">
+                                <a href="#variables" class="label-link">#变量</a>
+                                <a href="#css-layout" class="label-link">#布局</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：定义 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">定义</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <p><span class="annotation-container">
+                                    <span class="annotation" id="annotation_1">函数
+                                        <span class="annotation-popup">
+                                            完成特定功能的代码块
+                                            <a href="#annotation_1" class="back-to-source">↩ 跳回原文</a>
+                                        </span>
+                                    </span>
+                                </span>是组织代码的基本单元。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：语法 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">语法</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <div class="code-block">
+                                    <pre><code><span class="keyword">def</span> <span class="function">greet</span>(name):
+    <span class="string">"""返回问候语"""</span>
+    <span class="keyword">return</span> <span class="string">f"Hello, {name}!"</span>
+    
+<span class="comment"># 调用函数</span>
+result = greet(<span class="string">"World"</span>)
+<span class="function">print</span>(result)</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：说明 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">说明</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <ul>
+                                    <li>使用 <code>def</code> 关键字定义函数 <span class="inline-explanation">definition的缩写</span></li>
+                                    <li>函数名后跟括号和参数 <span class="inline-explanation">参数是可选的</span></li>
+                                    <li>函数体需要缩进 <span class="inline-explanation">通常使用4个空格</span></li>
+                                    <li>使用 <code>return</code> 返回值 <span class="inline-explanation">如果没有return，函数返回None</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 主卡2：Vigilant -->
+                <div class="card" id="vigilant">
+                    <h2 class="card-title">vigilant</h2>
+                    
+                    <!-- 标签区域 -->
+                    <div class="labels-container">
+                        <div class="label reference">
+                            <span class="label-symbol">></span>
+                            <div class="label-contents">
+                                <a href="#careful" class="label-link">#careful</a>
+                                <a href="#watchful" class="label-link">#watchful</a>
+                                <span class="label-content">近义词</span>
+                            </div>
+                        </div>
+                        <div class="label important">
+                            <span class="label-symbol">!</span>
+                            <div class="label-contents">
+                                <span class="label-content">重点词汇</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：解释 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">解释</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <p>adj. 警惕的；警觉的；戒备的</p>
+                                <p><span class="annotation-container">
+                                    <span class="annotation" id="annotation_2">vigilant
+                                        <span class="annotation-popup">
+                                            来自拉丁语vigilare，意为"保持清醒"
+                                            <a href="#annotation_2" class="back-to-source">↩ 跳回原文</a>
+                                        </span>
+                                    </span>
+                                </span> <span class="inline-explanation">形容词</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：词组 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">词组</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <ul>
+                                    <li>be vigilant about/against/over <span class="inline-explanation">对…保持警惕</span></li>
+                                    <li>remain/stay vigilant <span class="inline-explanation">保持警惕</span></li>
+                                    <li>require vigilance <span class="inline-explanation">需要警惕性</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：例句 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">例句</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <ul>
+                                    <li>Citizens are urged to remain vigilant against 
+                                        <span class="annotation-container">
+                                            <span class="annotation" id="annotation_3">cyber scams
+                                                <span class="annotation-popup">
+                                                    指通过互联网进行的欺诈行为
+                                                    <a href="#annotation_3" class="back-to-source">↩ 跳回原文</a>
+                                                </span>
+                                            </span>
+                                        </span>. 
+                                        <span class="inline-explanation">敦促公民对网络诈骗保持警惕</span>
+                                    </li>
+                                    <li>The security guard must be vigilant at all times. 
+                                        <span class="inline-explanation">保安必须时刻保持警觉</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 主卡3：CSS布局 -->
+                <div class="card" id="css-layout">
+                    <h2 class="card-title">css_layout</h2>
+                    
+                    <!-- 标签区域 -->
+                    <div class="labels-container">
+                        <div class="label">
+                            <span class="label-symbol">></span>
+                            <div class="label-contents">
+                                <a href="#flexbox" class="label-link">#flexbox</a>
+                                <a href="#grid" class="label-link">#grid</a>
+                            </div>
+                        </div>
+                        <div class="label info">
+                            <span class="label-symbol">i</span>
+                            <div class="label-contents">
+                                <span class="label-content">前端技术</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：概述 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">概述</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <p>CSS布局是现代网页设计的核心，主要包括以下几种技术：</p>
+                                <ol>
+                                    <li>传统布局：浮动和定位</li>
+                                    <li>Flexbox：一维布局解决方案</li>
+                                    <li>Grid：二维布局系统</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 区域：Flexbox示例 -->
+                    <div class="region">
+                        <hr class="region-line">
+                        <div class="region-title">Flexbox示例</div>
+                        <div class="region-content">
+                            <div class="content">
+                                <div class="code-block">
+                                    <pre><code><span class="comment">/* Flexbox容器 */</span>
+.container {
+    <span class="property">display</span>: flex;
+    <span class="property">justify-content</span>: space-between;
+    <span class="property">align-items</span>: center;
+}
+
+<span class="comment">/* Flex项目 */</span>
+.item {
+    <span class="property">flex</span>: 1;
+    <span class="property">margin</span>: 10px;
+}</code></pre>
+                                </div>
+                                <p class="inline-explanation">Flexbox非常适合创建一维布局，如导航栏或卡片列表</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 注点归档 -->
+        <section class="vibe-archive">
+            <h2 class="vibe-archive-title">注点归档</h2>
+            <div class="vibe-archive-cards">
+                <div class="vibe-archive-card">
+                    <h3>注点: python_function</h3>
+                    <div class="vibe-archive-content">
+                        <div class="vibe-archive-item">
+                            <a href="#annotation_1" class="vibe-link">函数 [完成特定功能的代码块]</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="vibe-archive-card">
+                    <h3>注点: vigilant</h3>
+                    <div class="vibe-archive-content">
+                        <div class="vibe-archive-item">
+                            <a href="#annotation_2" class="vibe-link">vigilant [来自拉丁语vigilare，意为"保持清醒"]</a>
+                        </div>
+                        <div class="vibe-archive-item">
+                            <a href="#annotation_3" class="vibe-link">cyber scams [指通过互联网进行的欺诈行为]</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- 归档导航 -->
+        <section class="archives-nav">
+            <h2 class="archive-title">归档导航</h2>
+            <div class="archive-cards">
+                <div class="archive-section">
+                    <h3 class="archive-title">编程学习</h3>
+                    <div class="archive-cards">
+                        <a href="#python-function" class="archive-card-link">python_function</a>
+                        <a href="#css-layout" class="archive-card-link">css_layout</a>
+                    </div>
+                </div>
+                <div class="archive-section">
+                    <h3 class="archive-title">英语词汇</h3>
+                    <div class="archive-cards">
+                        <a href="#vigilant" class="archive-card-link">vigilant</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // 完整的交互功能实现
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 标签跳转功能
+            const labelLinks = document.querySelectorAll('.label-link');
+            labelLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        // 平滑滚动到目标元素
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        // 添加高亮效果
+                        targetElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        setTimeout(() => {
+                            targetElement.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            });
+
+            // 2. 注卡跳转功能（注点归档 → 原文）
+            const vibeLinks = document.querySelectorAll('.vibe-link, .back-to-source');
+            vibeLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        // 触发注卡的悬停效果
+                        if (targetElement.classList.contains('annotation')) {
+                            targetElement.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                            setTimeout(() => {
+                                targetElement.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }
+                });
+            });
+
+            // 3. 归档导航跳转
+            const archiveLinks = document.querySelectorAll('.archive-card-link');
+            archiveLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }
+                });
+            });
+
+            // 4. 注卡悬停效果优化
+            const annotations = document.querySelectorAll('.annotation');
+            annotations.forEach(annotation => {
+                annotation.addEventListener('mouseenter', function() {
+                    annotations.forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // 5. 响应式网格布局调整
+            function adjustGridLayout() {
+                const archiveCards = document.querySelectorAll('.archive-cards');
+                const screenWidth = window.innerWidth;
+                
+                archiveCards.forEach(container => {
+                    if (screenWidth >= 1200) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+                    } else if (screenWidth >= 1024) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                    } else if (screenWidth >= 768) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+                    } else {
+                        container.style.gridTemplateColumns = '1fr';
+                    }
+                });
+            }
+
+            // 初始调整和窗口大小变化监听
+            adjustGridLayout();
+            window.addEventListener('resize', adjustGridLayout);
+
+            // 6. 页面加载时的锚点跳转处理
+            if (window.location.hash) {
+                const targetElement = document.querySelector(window.location.hash);
+                if (targetElement) {
+                    setTimeout(() => {
+                        targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+            }
+
+            // 7. 键盘导航支持
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    // ESC键关闭所有注卡弹出框
+                    annotations.forEach(annotation => {
+                        annotation.classList.remove('active');
+                    });
+                }
+            });
+        });
+
+        // 平滑滚动函数（兼容性处理）
+        function smoothScrollTo(element) {
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    </script>
+</body>
+</html>

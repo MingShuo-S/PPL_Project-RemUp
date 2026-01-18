@@ -1,734 +1,427 @@
-"""
-RemUp语法解析器 v2.0 - 完整版
-支持完整的RemUp语法，包括注卡、标签、区域、行内解释等
-"""
-
 import re
-import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple, Union
-from dataclasses import dataclass
-from .ast_nodes import Document, Archive, MainCard, Label, Region, VibeCard, VibeArchive
+from typing import List, Tuple, Optional, Dict, Any
+from remup.ast_nodes import (
+    Document, Archive, MainCard, Region, Label, 
+    VibeCard, Inline_Explanation, Rem_List, Code_Block, VibeArchive
+)
 
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-@dataclass
-class ParseState:
-    """解析状态机"""
-    current_archive: Optional[Archive] = None
-    current_card: Optional[MainCard] = None
-    current_region: Optional[Region] = None
-    line_number: int = 0
-    indent_level: int = 0
-    in_code_block: bool = False
-    code_block_language: str = ""
-    code_block_content: List[str] = None
-
-class RemUpParser:
-    """
-    RemUp语法解析器 - 完整版
+class Parser:
+    """语法分析器 - 完整修复注卡解析问题"""
     
-    支持的语法：
-    1. 归档定义: --<归档名>--
-    2. 卡片定义: <+主题 /+>
-    3. 标签定义: (符号: 内容)
-    4. 区域定义: ---区域名
-    5. 注卡语法: `内容`[批注]
-    6. 行内解释: >>解释文本
-    7. 代码块: ```语言 ... ```
-    8. 注释: # 注释内容
-    """
-    
-    # 语法模式定义
-    PATTERNS = {
-        'archive': re.compile(r'^--<([^>]+)>--\s*$'),
-        'card_start': re.compile(r'^<\+([^/]+)\s*$'),
-        'card_end': re.compile(r'^/\+>\s*$'),
-        'label': re.compile(r'^\(([^:]+):\s*([^)]+)\)\s*$'),
-        'region': re.compile(r'^---\s*(\w+)\s*$'),
-        'vibe_card': re.compile(r'`([^`]+)`\[([^\]]+)\]'),
-        'inline_explanation': re.compile(r'>>\s*([^\n<]+)'),
-        'comment': re.compile(r'^\s*#'),
-        'code_block_start': re.compile(r'^```\s*(\w*)\s*$'),
-        'code_block_end': re.compile(r'^```\s*$'),
-        'empty_line': re.compile(r'^\s*$')
-    }
-    
-    def __init__(self, verbose: bool = False):
-        self.verbose = verbose
-        self.state = ParseState()
-        self.vibe_processor = VibeCardProcessor()
-        self.archives = []  # 存储所有归档的列表
-    
-    def parse(self, source: str) -> Document:
-        """解析RemUp源代码 - 修复版"""
-        if self.verbose:
-            logger.info("开始解析RemUp源代码")
+    def __init__(self, tokens: List[Tuple[str, str, int]], source_name: str = "Generated Document"):
+        self.tokens = tokens
+        self.position = 0
+        self.current_token = tokens[0] if tokens else None
+        self.vibe_card_counter = 1
+        self.source_name = source_name
         
-        # 重置解析状态
-        self.state = ParseState()
-        self.archives = []  # 重置归档列表
+        # 解析状态
+        self.current_archive = None
+        self.current_card = None
+        self.current_region = None
+        self.current_list = None
         
-        lines = source.split('\n')
-        
-        try:
-            i = 0
-            while i < len(lines):
-                self.state.line_number = i + 1
-                line = lines[i].strip()
-                
-                if self.verbose:
-                    logger.debug(f"行 {i+1}: {line[:50]}{'...' if len(line) > 50 else ''}")
-                
-                # 处理当前行
-                processed = self._process_line(line, lines, i)
-                if processed is not None:
-                    i = processed  # 跳转到处理后的行号
-                else:
-                    i += 1
-                
-                # 安全检查，防止无限循环
-                if i > len(lines) * 2:
-                    raise RuntimeError("解析器可能进入无限循环")
-            
-            # 保存最后一个归档（如果存在且包含卡片）
-            if (self.state.current_archive and 
-                self.state.current_archive.cards and 
-                self.state.current_archive not in self.archives):
-                
-                self.archives.append(self.state.current_archive)
-                if self.verbose:
-                    logger.info(f"完成归档: {self.state.current_archive.name} (包含{len(self.state.current_archive.cards)}张卡片)")
-            
-            # 如果没有归档但有卡片，创建默认归档
-            if not self.archives and self.state.current_card:
-                default_archive = Archive(name="默认归档", cards=[self.state.current_card])
-                self.archives.append(default_archive)
-                if self.verbose:
-                    logger.info("创建默认归档")
-            
-            # 创建文档
-            document = Document(archives=self.archives)
-            
-            # 处理注卡
-            if self.verbose:
-                logger.info("处理注卡系统")
-            document = self.vibe_processor.process(document)
-            
-            if self.verbose:
-                total_cards = sum(len(archive.cards) for archive in self.archives)
-                logger.info(f"解析完成: {len(self.archives)}个归档, {total_cards}张卡片")
-            
-            return document
-            
-        except Exception as e:
-            logger.error(f"解析错误 (行 {self.state.line_number}): {e}")
-            if self.verbose:
-                # 提供更多错误上下文
-                start_line = max(0, self.state.line_number - 3)
-                end_line = min(len(lines), self.state.line_number + 2)
-                context = "\n".join(f"{i+1}: {line}" for i, line in enumerate(lines[start_line:end_line], start_line))
-                logger.error(f"错误上下文:\n{context}")
-            raise
-    
-    def _process_archive_start(self, match: re.Match, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理归档开始 - 完整修复版"""
-        archive_name = match.group(1).strip()
-        
-        # 保存之前的归档（如果存在且包含卡片）
-        if (self.state.current_archive and 
-            self.state.current_archive.cards and 
-            self.state.current_archive not in self.archives):
-            
-            self.archives.append(self.state.current_archive)
-            if self.verbose:
-                logger.info(f"完成归档: {self.state.current_archive.name} (包含{len(self.state.current_archive.cards)}张卡片)")
-        
-        # 创建新归档
-        self.state.current_archive = Archive(
-            name=archive_name,
-            cards=[],
-            description=self._extract_archive_description(all_lines, current_index)
-        )
-        
-        # 将新归档添加到列表
-        if self.state.current_archive not in self.archives:
-            self.archives.append(self.state.current_archive)
-        
-        # 重置当前卡片和区域状态
-        self.state.current_card = None
-        self.state.current_region = None
-        
-        if self.verbose:
-            logger.info(f"开始归档: {archive_name}")
-        
-        return None
-    
-    def _extract_archive_description(self, all_lines: List[str], current_index: int) -> str:
-        """提取归档描述（归档定义后的注释）"""
-        description = ""
-        next_line_index = current_index + 1
-        
-        # 最多查看接下来的5行注释
-        max_lines = min(5, len(all_lines) - current_index - 1)
-        
-        for i in range(max_lines):
-            line_index = current_index + i + 1
-            if line_index >= len(all_lines):
-                break
-                
-            line = all_lines[line_index].strip()
-            
-            # 如果是空行，继续查找
-            if not line:
-                continue
-                
-            # 如果是注释，提取内容
-            if line.startswith('#'):
-                comment_content = line[1:].strip()
-                if description:
-                    description += " " + comment_content
-                else:
-                    description = comment_content
-            else:
-                # 遇到非注释行，停止提取
-                break
-        
-        return description
-    
-    def _process_card_start(self, match: re.Match, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理卡片开始 - 修复版"""
-        theme = match.group(1).strip()
-        
-        # 确保有当前归档
-        if not self.state.current_archive:
-            # 创建默认归档
-            self.state.current_archive = Archive(name="默认归档", cards=[])
-            if self.state.current_archive not in self.archives:
-                self.archives.append(self.state.current_archive)
-            if self.verbose:
-                logger.info("创建默认归档")
-        
-        # 创建新卡片
-        self.state.current_card = MainCard(
-            theme=theme,
-            labels=[],
-            regions=[],
-            vibe_cards=[],
-            metadata=self._extract_card_metadata(all_lines, current_index)
-        )
-        
-        # 添加到当前归档
-        self.state.current_archive.cards.append(self.state.current_card)
-        
-        # 重置当前区域
-        self.state.current_region = None
-        
-        if self.verbose:
-            logger.info(f"开始卡片: {theme}")
-        
-        return None
-    
-    def _process_card_end(self, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理卡片结束 - 修复版"""
-        if self.state.current_card:
-            if self.verbose:
-                logger.info(f"结束卡片: {self.state.current_card.theme}")
-            
-            # 检查卡片是否有效（至少有一个区域）
-            if not self.state.current_card.regions:
-                logger.warning(f"卡片 '{self.state.current_card.theme}' 没有区域内容")
-            
-            self.state.current_card = None
-            self.state.current_region = None
-        
-        return None
-    
-    def _process_region_start(self, match: re.Match, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理区域开始 - 修复版"""
-        if not self.state.current_card:
-            logger.warning(f"行 {self.state.line_number}: 区域定义必须在卡片内部")
-            return None
-        
-        region_name = match.group(1).strip()
-        
-        # 创建新区域
-        self.state.current_region = Region(
-            name=region_name,
-            content="",
-            lines=[],
-            vibe_cards=[],
-            inline_explanations={}
-        )
-        
-        self.state.current_card.regions.append(self.state.current_region)
-        
-        if self.verbose:
-            logger.info(f"开始区域: {region_name}")
-        
-        return None
-    
-    def _process_label(self, match: re.Match, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理标签"""
-        if not self.state.current_card:
-            logger.warning(f"行 {self.state.line_number}: 标签必须在卡片内部")
-            return None
-        
-        symbol = match.group(1)
-        content_text = match.group(2).strip()
-        
-        # 解析标签内容（逗号分隔的列表）
-        content_items = [item.strip() for item in content_text.split(',')]
-        
-        label = Label(
-            symbol=symbol,
-            content=content_items,
-            label_type=self._determine_label_type(symbol)  # 将 type 改为 label_type
-        )
-        
-        self.state.current_card.labels.append(label)
-        
-        if self.verbose:
-            logger.info(f"添加标签: {symbol}: {content_text}")
-        
-        return None
-    
-    def _process_code_block_start(self, match: re.Match, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理代码块开始"""
-        language = match.group(1).strip() or "text"
-        self.state.in_code_block = True
-        self.state.code_block_language = language
-        self.state.code_block_content = []
-        
-        if self.verbose:
-            logger.info(f"开始代码块: {language}")
-        
-        return None
-    
-    def _process_code_block_line(self, line: str, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理代码块内的行"""
-        # 检查代码块结束
-        if self.PATTERNS['code_block_end'].match(line):
-            return self._process_code_block_end(all_lines, current_index)
-        
-        # 添加内容到代码块
-        self.state.code_block_content.append(line)
-        return None
-    
-    def _process_code_block_end(self, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理代码块结束"""
-        if self.state.code_block_content and self.state.current_region:
-            # 创建代码块区域
-            code_content = '\n'.join(self.state.code_block_content)
-            
-            # 将代码块添加到当前区域
-            if self.state.current_region.content:
-                self.state.current_region.content += '\n\n```' + self.state.code_block_language + '\n'
-                self.state.current_region.content += code_content + '\n```'
-            else:
-                self.state.current_region.content = '```' + self.state.code_block_language + '\n'
-                self.state.current_region.content += code_content + '\n```'
-            
-            # 添加到行列表
-            self.state.current_region.lines.append('```' + self.state.code_block_language)
-            self.state.current_region.lines.extend(self.state.code_block_content)
-            self.state.current_region.lines.append('```')
-        
-        # 重置代码块状态
-        self.state.in_code_block = False
-        self.state.code_block_language = ""
-        self.state.code_block_content = None
-        
-        if self.verbose:
-            logger.info("结束代码块")
-        
-        return None
-    
-    def _process_line(self, line: str, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理单行内容 - 修复版"""
-        line_str = line.rstrip('\r')  # 确保是字符串
-        
-        # 处理代码块
-        if self.state.in_code_block:
-            return self._process_code_block_line(line_str, all_lines, current_index)
-        
-        # 检查各种模式
-        for pattern_name, pattern in self.PATTERNS.items():
-            match = pattern.match(line_str)
-            if match:
-                # 获取处理方法
-                method_name = f"_process_{pattern_name}"
-                if hasattr(self, method_name):
-                    method = getattr(self, method_name)
-                    return method(match, all_lines, current_index)
-                else:
-                    # 如果没有对应的处理方法，记录警告并使用默认处理
-                    if self.verbose:
-                        logger.warning(f"行 {self.state.line_number}: 模式 '{pattern_name}' 没有对应的处理方法")
-                    break  # 跳出循环，使用默认处理
-        
-        # 默认处理 - 传递字符串而不是match对象
-        return self._process_default(line_str, all_lines, current_index)
-        
-    def _extract_vibe_cards_from_line(self, line: str, source_card: str, line_number: int) -> Tuple[str, List[VibeCard]]:
-        """从行中提取注卡"""
-        vibe_cards = []
-        
-        def replace_vibe(match):
-            content = match.group(1).strip()
-            annotation = match.group(2).strip()
-            
-            vibe_card = VibeCard(
-                content=content,
-                annotation=annotation,
-                source_card=source_card,
-                line_number=line_number
-            )
-            vibe_cards.append(vibe_card)
-            
-            # 返回替换后的内容（可以添加特殊标记）
-            return f"`{content}`"
-        
-        # 替换所有注卡标记
-        processed_line = self.PATTERNS['vibe_card'].sub(replace_vibe, line)
-        
-        return processed_line, vibe_cards
-    
-    def _extract_archive_description(self, all_lines: List[str], current_index: int) -> str:
-        """提取归档描述（归档定义后的注释）"""
-        description = ""
-        next_line_index = current_index + 1
-        
-        while next_line_index < len(all_lines):
-            next_line = all_lines[next_line_index].strip()
-            if self.PATTERNS['comment'].match(next_line):
-                # 移除注释符号并添加描述
-                comment_content = re.sub(r'^\s*#\s*', '', next_line)
-                if description:
-                    description += " " + comment_content
-                else:
-                    description = comment_content
-                next_line_index += 1
-            else:
-                break
-        
-        return description
-    
-    def _extract_card_metadata(self, all_lines: List[str], current_index: int) -> Dict[str, Any]:
-        """提取卡片元数据（卡片开始后的注释）"""
-        metadata = {}
-        next_line_index = current_index + 1
-        
-        while next_line_index < len(all_lines):
-            next_line = all_lines[next_line_index].strip()
-            comment_match = self.PATTERNS['comment'].match(next_line)
-            if comment_match:
-                # 解析元数据注释，如 # 标签: 值
-                comment_content = re.sub(r'^\s*#\s*', '', next_line)
-                if ':' in comment_content:
-                    key, value = comment_content.split(':', 1)
-                    metadata[key.strip()] = value.strip()
-                next_line_index += 1
-            else:
-                break
-        
-        return metadata
-    
-    def _determine_label_type(self, symbol: str) -> str:
-        """根据符号确定标签类型"""
-        label_types = {
-            '!': 'important',
-            '?': 'question', 
-            '>': 'reference',
-            '<': 'backlink',
-            'i': 'info',
-            '✓': 'completed',
-            '☆': 'star',
-            '▲': 'priority'
-        }
-        return label_types.get(symbol, 'default')
-    
-    def _process_default(self, line: str, all_lines: List[str], current_index: int) -> Optional[int]:
-        """处理默认文本行 - 修复版"""
-        # 确保line是字符串
-        if hasattr(line, 'string'):  # 如果是re.Match对象
-            line_str = line.string
+    def advance(self):
+        """前进到下一个token"""
+        if self.position < len(self.tokens) - 1:
+            self.position += 1
+            self.current_token = self.tokens[self.position]
         else:
-            line_str = str(line)
-        
-        # 空行处理
-
-        if not line_str.strip():
-            return None
-        
-        # 注释行处理
-        if self.PATTERNS['comment'].match(line_str):
-            return None
-        
-        # 添加到当前区域
-        if self.state.current_region:
-            if self.state.current_region.content:
-                self.state.current_region.content += "\n" + line_str
-            else:
-                self.state.current_region.content = line_str
-            
-            self.state.current_region.lines.append(line_str)
-            
-            # 处理行内解释
-            explanation_match = self.PATTERNS['inline_explanation'].search(line_str)
-            if explanation_match:
-                # 可以在这里处理行内解释
-                pass
-            
-            # 处理注卡
-            vibe_cards = self._extract_vibe_cards_from_line(line_str, self.state.current_card.theme, len(self.state.current_region.lines))
-            self.state.current_region.vibe_cards.extend(vibe_cards)
-        
+            self.current_token = None
+    
+    def peek(self, offset: int = 1) -> Optional[Tuple[str, str, int]]:
+        """查看前方第offset个token"""
+        peek_pos = self.position + offset
+        if 0 <= peek_pos < len(self.tokens):
+            return self.tokens[peek_pos]
         return None
-    
 
-class VibeCardProcessor:
-    """增强版注卡处理器"""
+    def parse(self) -> Document:
+        """解析整个文档"""
+        archives = []
+        
+        # 自动生成标题
+        if self.source_name.endswith('.remup'):
+            title = self.source_name[:-6]
+        else:
+            title = self.source_name
+        
+        # 解析文档内容
+        while self.current_token:
+            token_type, token_value, _ = self.current_token
+            
+            if token_type == 'ARCHIVE':
+                archive = self.parse_archive()
+                if archive:
+                    archives.append(archive)
+                    self.current_archive = archive
+            elif token_type == 'CARD_START':
+                card = self.parse_card()
+                if card:
+                    # 确保卡片有归属的归档
+                    if not archives:
+                        default_archive = Archive("Default", [])
+                        archives.append(default_archive)
+                        self.current_archive = default_archive
+                    self.current_archive.cards.append(card)
+            else:
+                self.advance()
+        
+        # 构建注卡归档
+        vibe_archive = self.build_vibe_archive(archives)
+        
+        return Document(title, archives, vibe_archive)
     
-    def process(self, document: Document) -> Document:
-        """处理文档中的所有注卡"""
-        if not document.archives:
-            return document
+    def parse_archive(self) -> Optional[Archive]:
+        """解析归档定义"""
+        if not self.current_token or self.current_token[0] != 'ARCHIVE':
+            return None
         
-        all_vibe_cards = []
-        vibe_main_cards = []
+        archive_name = self.current_token[1]
+        self.advance()
+        return Archive(archive_name, [])
+    
+    def parse_card(self) -> Optional[MainCard]:
+        """解析卡片定义"""
+        if not self.current_token or self.current_token[0] != 'CARD_START':
+            return None
         
-        # 收集所有注卡并生成主卡
-        for archive in document.archives:
-            for card in archive.cards:
-                card_vibe_cards = self._extract_vibe_cards_from_card(card)
-                all_vibe_cards.extend(card_vibe_cards)
-                card.vibe_cards = card_vibe_cards
+        theme = self.current_token[1]
+        self.advance()
+        
+        # 解析标签
+        labels = self.parse_labels()
+        
+        # 初始化卡片
+        card = MainCard(theme, labels, [])
+        self.current_card = card
+        
+        # 解析区域
+        while self.current_token and self.current_token[0] != 'CARD_END':
+            if self.current_token[0] == 'REGION':
+                region = self.parse_region()
+                if region:
+                    card.regions.append(region)
+            else:
+                self.advance()
+        
+        # 消费卡片结束标记
+        if self.current_token and self.current_token[0] == 'CARD_END':
+            self.advance()
+            
+        return card
+    
+    def parse_labels(self) -> List[Label]:
+        """解析标签列表"""
+        labels = []
+        
+        while self.current_token and self.current_token[0] == 'LABEL':
+            label_str = self.current_token[1]
+            self.advance()
+            
+            if ':' in label_str:
+                symbol, content_str = label_str.split(':', 1)
+                symbol = symbol.strip()
+                content_list = [c.strip() for c in content_str.split(',')]
                 
-                # 为每个注卡生成主卡
-                for vibe_card in card_vibe_cards:
-                    main_card = self._create_main_card_from_vibe(vibe_card, card)
-                    vibe_main_cards.append(main_card)
+                label = Label(symbol, content_list, "default")
+                labels.append(label)
         
-        # 创建注卡归档
-        if vibe_main_cards:
-            vibe_archive = VibeArchive(
-                name="自动生成注卡",
-                cards=vibe_main_cards,
-                description=f"基于{len(all_vibe_cards)}个注卡自动生成"
-            )
-            document.vibe_archive = vibe_archive
-        
-        # 添加注卡链接关系
-        self._add_vibe_links(document)
-        
-        return document
+        return labels
     
-    def _extract_vibe_cards_from_card(self, card: MainCard) -> List[VibeCard]:
-        """从卡片中提取所有注卡"""
-        vibe_cards = []
+    def parse_region(self) -> Optional[Region]:
+        """解析区域定义 - 核心修复"""
+        if not self.current_token or self.current_token[0] != 'REGION':
+            return None
         
-        for region in card.regions:
-            region_vibe_cards = self._extract_vibe_cards_from_region(region, card.theme)
-            vibe_cards.extend(region_vibe_cards)
-            region.vibe_cards = region_vibe_cards
+        region_name = self.current_token[1]
+        self.advance()
         
-        return vibe_cards
+        region = Region(region_name, "", [])
+        self.current_region = region
+        
+        # 解析区域内容
+        while self.current_token and self.current_token[0] not in ['REGION', 'CARD_END']:
+            token_type, token_value, _ = self.current_token
+            
+            if token_type == 'TEXT':
+                self.parse_text_line(region)
+            elif token_type == 'VIBE_CARD':
+                self.parse_vibe_card(region)
+            elif token_type == 'INLINE_EXPLANATION':
+                self.parse_inline_explanation(region)
+            elif token_type in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
+                self.parse_list_item(region, token_type)
+            elif token_type == 'CODE_BLOCK_START':
+                self.parse_code_block(region)
+            else:
+                self.advance()
+        
+        # 更新区域内容
+        region.content = '\n'.join(region.lines)
+        return region
     
-    def _extract_vibe_cards_from_region(self, region: Region, source_card: str) -> List[VibeCard]:
-        """从区域中提取注卡"""
-        vibe_cards = []
+    def parse_text_line(self, region: Region):
+        """解析文本行"""
+        if not self.current_token or self.current_token[0] != 'TEXT':
+            return
         
-        # 从区域内容中提取
-        content_vibe_cards = self._extract_vibe_cards_from_text(region.content, source_card)
-        vibe_cards.extend(content_vibe_cards)
-        
-        # 从行中提取（保留行号信息）
-        for i, line in enumerate(region.lines):
-            line_vibe_cards = self._extract_vibe_cards_from_text(line, source_card, i)
-            for vibe in line_vibe_cards:
-                vibe.line_number = i  # 设置准确的行号
-            vibe_cards.extend(line_vibe_cards)
-        
-        return vibe_cards
+        content = self.current_token[1]
+        region.lines.append(content)
+        self.advance()
     
-    def _extract_vibe_cards_from_text(self, text: str, source_card: str, line_number: int = 0) -> List[VibeCard]:
-        """从文本中提取注卡"""
-        vibe_cards = []
-        pattern = re.compile(r'`([^`]+)`\[([^\]]+)\]')
+    def parse_vibe_card(self, region: Region):
+        """解析注卡 - 关键修复"""
+        if not self.current_token or self.current_token[0] != 'VIBE_CARD':
+            return
         
-        for match in pattern.finditer(text):
-            content = match.group(1).strip()
+        content = self.current_token[1]
+        
+        # 解析注卡内容：格式为"内容[批注]"
+        match = re.match(r'([^\[\]]+)\[([^\]]+)\]', content)
+        if match:
+            card_content = match.group(1).strip()
             annotation = match.group(2).strip()
             
             vibe_card = VibeCard(
-                content=content,
+                id=self.vibe_card_counter,
+                content=card_content,
                 annotation=annotation,
-                source_card=source_card,
-                line_number=line_number
+                source_card=self.current_card.theme if self.current_card else ""
+            )
+            
+            # 添加到区域和卡片
+            region.vibe_cards.append(vibe_card)
+            if self.current_card:
+                self.current_card.vibe_cards.append(vibe_card)
+            
+            # 在区域行中添加注卡内容
+            region.lines.append(card_content)
+            
+            self.vibe_card_counter += 1
+        
+        self.advance()
+    
+    def parse_inline_explanation(self, region: Region):
+        """解析行内解释"""
+        if not self.current_token or self.current_token[0] != 'INLINE_EXPLANATION':
+            return
+        
+        content = self.current_token[1]
+        
+        # 关联到前一行
+        if region.lines:
+            last_line_index = len(region.lines) - 1
+            last_line_content = region.lines[last_line_index]
+            inline_explanation = Inline_Explanation(last_line_content, content)
+            region.inline_explanations[last_line_index] = inline_explanation
+        
+        self.advance()
+    
+    def parse_list_item(self, region: Region, list_type: str):
+        """解析列表项"""
+        if not self.current_token or self.current_token[0] not in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
+            return
+        
+        content = self.current_token[1]
+        
+        # 检查内容中是否包含注卡
+        vibe_cards = []
+        match = re.match(r'([^\[\]]+)\[([^\]]+)\]', content)
+        if match:
+            card_content = match.group(1).strip()
+            annotation = match.group(2).strip()
+            
+            vibe_card = VibeCard(
+                id=self.vibe_card_counter,
+                content=card_content,
+                annotation=annotation,
+                source_card=self.current_card.theme if self.current_card else ""
             )
             vibe_cards.append(vibe_card)
+            self.vibe_card_counter += 1
+            
+            # 用内容替换标记
+            content = card_content
         
-        return vibe_cards
+        # 添加到区域行
+        region.lines.append(content)
+        
+        # 处理注卡
+        if vibe_cards:
+            region.vibe_cards.extend(vibe_cards)
+            if self.current_card:
+                self.current_card.vibe_cards.extend(vibe_cards)
+        
+        self.advance()
     
-    def _create_main_card_from_vibe(self, vibe_card: VibeCard, source_card: MainCard) -> MainCard:
-        """从注卡创建详细的主卡"""
-        # 创建返回链接标签
-        backlink_label = Label(
-            symbol="←",
-            content=[f"#{source_card.theme}"],
-            label_type="backlink"
-        )
+    def parse_code_block(self, region: Region):
+        """解析代码块"""
+        if not self.current_token or self.current_token[0] != 'CODE_BLOCK_START':
+            return
         
-        # 创建内容区域
-        content_region = Region(
-            name="内容",
-            content=vibe_card.content,
-            lines=[vibe_card.content]
-        )
+        language = self.current_token[1]
+        self.advance()
         
-        # 创建批注区域
-        annotation_region = Region(
-            name="批注", 
-            content=vibe_card.annotation,
-            lines=[vibe_card.annotation]
-        )
+        code_lines = []
         
-        # 创建来源区域
-        source_info = f"来自卡片: {source_card.theme}"
-        if vibe_card.line_number > 0:
-            source_info += f" (第{vibe_card.line_number + 1}行)"
+        # 收集代码内容直到代码块结束
+        while self.current_token and self.current_token[0] != 'CODE_BLOCK_END':
+            if self.current_token[0] == 'CODE_BLOCK_CONTENT':
+                code_lines.append(self.current_token[1])
+            self.advance()
         
-        source_region = Region(
-            name="来源",
-            content=source_info,
-            lines=[source_info]
-        )
+        # 消费代码块结束标记
+        if self.current_token and self.current_token[0] == 'CODE_BLOCK_END':
+            self.advance()
         
-        # 创建上下文区域（如果源卡片有相关区域）
-        context_region = self._create_context_region(vibe_card, source_card)
-        
-        regions = [content_region, annotation_region, source_region]
-        if context_region:
-            regions.append(context_region)
-        
-        # 创建主卡
-        main_card = MainCard(
-            theme=vibe_card.content,
-            labels=[backlink_label],
-            regions=regions,
-            vibe_cards=[],  # 注卡生成的主卡不再包含注卡
-            metadata={
-                "source_card": source_card.theme,
-                "line_number": vibe_card.line_number,
-                "generated_from": "vibe_card"
-            }
-        )
-        
-        return main_card
+        # 创建代码块节点
+        if code_lines:
+            code_content = '\n'.join(code_lines)
+            code_block = Code_Block(language, code_content)
+            
+            # 将代码块作为特殊行添加到区域
+            region.lines.append(f"CODE_BLOCK:{language}")
     
-    def _create_context_region(self, vibe_card: VibeCard, source_card: MainCard) -> Optional[Region]:
-        """创建上下文区域，显示注卡在源卡片中的上下文"""
-        if not vibe_card.line_number or vibe_card.line_number <= 0:
-            return None
+    def build_vibe_archive(self, archives: List[Archive]) -> Optional[VibeArchive]:
+        """构建注卡归档"""
+        all_vibe_cards = []
         
-        # 查找源区域
-        source_region = None
-        for region in source_card.regions:
-            if vibe_card.line_number < len(region.lines):
-                source_region = region
-                break
-        
-        if not source_region:
-            return None
-        
-        # 提取上下文（前后各2行）
-        start_line = max(0, vibe_card.line_number - 2)
-        end_line = min(len(source_region.lines), vibe_card.line_number + 3)
-        
-        context_lines = source_region.lines[start_line:end_line]
-        highlighted_lines = []
-        
-        for i, line in enumerate(context_lines, start_line):
-            if i == vibe_card.line_number:
-                highlighted_lines.append(f"> {line}  ← 注卡位置")
-            else:
-                highlighted_lines.append(f"  {line}")
-        
-        context_content = "\n".join(highlighted_lines)
-        
-        return Region(
-            name="上下文",
-            content=context_content,
-            lines=highlighted_lines
-        )
-    
-    def _add_vibe_links(self, document: Document):
-        """添加注卡之间的链接关系"""
-        # 收集所有注卡主题
-        vibe_themes = set()
-        if document.vibe_archive:
-            for card in document.vibe_archive.cards:
-                vibe_themes.add(card.theme.lower())
-        
-        # 在主卡中查找对注卡的引用
-        for archive in document.archives:
+        # 收集所有注卡
+        for archive in archives:
             for card in archive.cards:
-                for region in card.regions:
-                    # 在内容中查找注卡引用
-                    for theme in vibe_themes:
-                        if theme.lower() in region.content.lower():
-                            # 添加引用标签
-                            ref_label = Label(
-                                symbol="→",
-                                content=[f"#{theme}"],
-                                label_type="vibe_reference"
-                            )
-                            card.labels.append(ref_label)
-                            break
+                all_vibe_cards.extend(card.vibe_cards)
+        
+        if not all_vibe_cards:
+            return None
+        
+        # 按源卡片分组
+        cards_by_source = {}
+        for vibe_card in all_vibe_cards:
+            source = vibe_card.source_card
+            if source not in cards_by_source:
+                cards_by_source[source] = []
+            cards_by_source[source].append(vibe_card)
+        
+        # 为每个源卡片创建主卡
+        vibe_archive_cards = []
+        for source, cards in cards_by_source.items():
+            # 创建区域来存放注卡内容
+            region_content = []
+            for card in cards:
+                region_content.append(f"{card.content}")
+            
+            region = Region(f"注卡内容 - {source}", "\n".join(region_content), region_content)
+            # 添加注卡到区域
+            region.vibe_cards.extend(cards)
+            
+            main_card = MainCard(f"注卡: {source}", [], [region])
+            # 添加注卡到卡片
+            main_card.vibe_cards.extend(cards)
+            vibe_archive_cards.append(main_card)
+        
+        return VibeArchive("注卡归档", vibe_archive_cards)
 
+def print_ast(node, indent=0):
+    """打印AST结构（用于调试）"""
+    indent_str = "  " * indent
+    
+    if isinstance(node, Document):
+        print(f"{indent_str}Document(title='{node.title}')")
+        for archive in node.archives:
+            print_ast(archive, indent + 1)
+        if node.vibe_archive:
+            print_ast(node.vibe_archive, indent + 1)
+        else:
+            print(f"{indent_str}VibeArchive: None")
+    
+    elif isinstance(node, Archive):
+        print(f"{indent_str}Archive(name='{node.name}', cards={len(node.cards)})")
+        for card in node.cards:
+            print_ast(card, indent + 2)
+    
+    elif isinstance(node, MainCard):
+        print(f"{indent_str}MainCard(theme='{node.theme}', labels={len(node.labels)}, regions={len(node.regions)}, vibe_cards={len(node.vibe_cards)})")
+        for label in node.labels:
+            print_ast(label, indent + 3)
+        for region in node.regions:
+            print_ast(region, indent + 3)
+    
+    elif isinstance(node, Region):
+        print(f"{indent_str}Region(name='{node.name}', lines={len(node.lines)}, vibe_cards={len(node.vibe_cards)}, inline_explanations={len(node.inline_explanations)})")
+        for i, line in enumerate(node.lines):
+            print(f"{indent_str}  Line {i}: {line[:50]}{'...' if len(line) > 50 else ''}")
+        for vibe_card in node.vibe_cards:
+            print_ast(vibe_card, indent + 4)
+        for line_idx, explanation in node.inline_explanations.items():
+            print(f"{indent_str}  InlineExplanation[line={line_idx}]: {explanation.content[:30]}...")
+    
+    elif isinstance(node, Label):
+        print(f"{indent_str}Label(symbol='{node.symbol}', content={node.content})")
+    
+    elif isinstance(node, VibeCard):
+        print(f"{indent_str}VibeCard(id={node.id}, content='{node.content}', annotation='{node.annotation}')")
+    
+    elif isinstance(node, VibeArchive):
+        print(f"{indent_str}VibeArchive(name='{node.name}', cards={len(node.cards)})")
+        for card in node.cards:
+            print_ast(card, indent + 2)
 
-# 向后兼容的别名
-Parser = RemUpParser
-
-# 使用示例
+# 测试代码
 if __name__ == "__main__":
-    # 测试解析器
-    sample_code = """
---<英语学习>--
-# 这是一个归档注释
-
+    from lexer import Lexer
+    
+    # 测试用例
+    test_code = """
+--<Vocabulary>--
 <+vigilant
-# 标签: 重点词汇
-(!: 重点词汇)
 (>: #careful, #watchful, 近义词)
-
+(!: 重要)
 ---解释
 adj. 警惕的；警觉的；戒备的
-`vigilant`[来自拉丁语vigilare，意为"保持清醒"] >>形容词
-
 ---词组
 - be vigilant about/against/over >>对…保持警惕
 - remain/stay vigilant >>保持警惕
-
+- require vigilance >>（需要警惕性）
 ---例句
-- Citizens are urged to remain vigilant against `网络诈骗`[指通过互联网进行的欺诈行为]。 >>敦促公民对网络诈骗保持警惕
-- The security guard must be vigilant at all times. >>保安必须时刻保持警觉。
-/+
+- Citizens are urged to remain vigilant against cyber scams. `网络诈骗`[指通过互联网进行的欺诈行为] >>敦促公民对网络诈骗保持警惕
+/+>
 """
     
-    parser = RemUpParser(verbose=True)
-    try:
-        document = parser.parse(sample_code)
-        print("解析成功!")
-        print(f"归档数: {len(document.archives)}")
-        for archive in document.archives:
-            print(f"  归档: {archive.name}")
-            for card in archive.cards:
-                print(f"    卡片: {card.theme}")
-                print(f"      标签: {len(card.labels)}")
-                print(f"      区域: {len(card.regions)}")
-    except Exception as e:
-        print(f"解析错误: {e}")
+    # 词法分析
+    lexer = Lexer()
+    tokens = lexer.tokenize(test_code)
+    
+    print("词法分析结果:")
+    for token in tokens:
+        print(f"{token[0]:25} {token[1]}")
+    
+    # 语法分析
+    parser = Parser(tokens, "test.remup")
+    ast = parser.parse()
+    
+    print("\n" + "="*60)
+    print("AST结构:")
+    print("="*60)
+    print_ast(ast)
+    
+    # 检查注卡解析结果
+    print("\n" + "="*60)
+    print("注卡解析检查:")
+    print("="*60)
+    
+    total_vibe_cards = 0
+    for archive in ast.archives:
+        for card in archive.cards:
+            total_vibe_cards += len(card.vibe_cards)
+            if card.vibe_cards:
+                print(f"卡片 '{card.theme}' 中的注卡:")
+                for vibe_card in card.vibe_cards:
+                    print(f"  - 内容: {vibe_card.content}")
+                    print(f"    批注: {vibe_card.annotation}")
+    
+    print(f"\n总注卡数量: {total_vibe_cards}")
+    print(f"注卡归档: {'存在' if ast.vibe_archive else '不存在'}")
+    
+    if ast.vibe_archive:
+        print(f"注卡归档中的卡片数量: {len(ast.vibe_archive.cards)}")
