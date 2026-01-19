@@ -4,17 +4,26 @@
 import argparse
 import sys
 from pathlib import Path
-from .compiler import RemUpCompiler
+
+# 使用绝对导入替代相对导入
+try:
+    from remup.compiler import RemUpCompiler, compile_remup
+except ImportError:
+    # 开发环境下的回退方案
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+    from compiler import RemUpCompiler, compile_remup
 
 def main():
     parser = argparse.ArgumentParser(
-        description="RemUp编译器 - 将RemUp标记语言(.ru文件)转换为HTML"
+        description="RemUp编译器 - 将RemUp标记语言(.remup或.ru文件)转换为HTML"
     )
-    parser.add_argument("input", help="输入的RemUp文件路径(.ru)或目录")
+    parser.add_argument("input", help="输入的RemUp文件路径(.remup或.ru)或目录")
     parser.add_argument("-o", "--output", help="输出HTML文件路径或目录")
     parser.add_argument("-c", "--css", help="自定义CSS文件路径")
     parser.add_argument("-d", "--dir", action="store_true", 
-                       help="编译整个目录下的.ru文件")
+                       help="编译整个目录下的.remup或.ru文件")
     
     args = parser.parse_args()
     

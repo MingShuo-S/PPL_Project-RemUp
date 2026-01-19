@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-HTML生成器 v2.1 - 修复注卡和注卡归档显示问题
-基于修复后的Parser AST，生成功能完整的HTML文件
+HTML生成器 v2.2 - 优化输出路径和标题
+1. 输出文件在同目录生成
+2. 使用纯净文件名作为标题
 """
 
 import os
@@ -15,8 +16,14 @@ from pathlib import Path
 class HTMLGenerator:
     """HTML生成器 - 基于AST生成功能完整的HTML"""
     
-    def __init__(self, output_dir: str = "output", css_file: str = "RemStyle.css"):
-        self.output_dir = output_dir
+    def __init__(self, output_dir: str = None, css_file: str = "RemStyle.css"):
+        """
+        初始化HTML生成器
+        
+        Args:
+            output_dir: 输出目录，如果为None则自动确定
+            css_file: CSS文件名
+        """
         self.css_file = css_file
         self.vibe_card_counter = 1
         self.current_card_theme = ""
@@ -35,10 +42,9 @@ class HTMLGenerator:
             '▲': 'priority'
         }
         
-        os.makedirs(output_dir, exist_ok=True)
-        
-    def generate(self, document: Document, output_path: str, css_content: str = None) -> str:
-        """生成完整的HTML文档 - 修复路径处理"""
+    def generate(self, document: Document, output_path: str, css_content: str = None, 
+                 page_title: str = None) -> str:
+        """生成完整的HTML文档 - 修复路径和标题处理"""
         
         # 重置状态
         self.vibe_card_counter = 1
@@ -48,18 +54,24 @@ class HTMLGenerator:
         # 处理输出路径
         output_path = Path(output_path)
         
-        # 如果输出路径是相对路径，确保输出目录存在
-        if not output_path.is_absolute():
-            # 确保输出目录存在
-            self.output_dir = output_path.parent
-            self.output_dir.mkdir(parents=True, exist_ok=True)
-            filename = output_path.name
-        else:
-            # 绝对路径，直接使用
-            self.output_dir = output_path.parent
-            filename = output_path.name
+        # 设置输出目录
+        self.output_dir = output_path.parent
         
-        print(f"HTMLGenerator: 输出目录={self.output_dir}, 文件名={filename}")
+        # 确保输出目录存在
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        print(f"HTML生成器: 输出路径={output_path}")
+        
+        # 生成页面标题
+        if page_title:
+            # 使用传入的纯净标题
+            html_title = f"{page_title} - RemUp笔记"
+        else:
+            # 从文档标题中提取纯净文件名
+            html_title = self._extract_clean_title(document.title)
+            print(f"从文档标题提取的标题: {html_title}")
+        
+        print(f"页面标题: {html_title}")
         
         # 收集所有卡片主题
         self._collect_card_themes(document)
@@ -78,7 +90,7 @@ class HTMLGenerator:
         
         # 构建完整HTML
         html_content = self._build_full_html(
-            document.title,  # 使用AST中的文档标题，而不是文件名
+            html_title,  # 使用处理后的纯净标题
             main_content,
             vibe_archive_content,
             other_archives_content
@@ -91,6 +103,31 @@ class HTMLGenerator:
         print(f"HTML生成完成: {output_path}")
         return str(output_path)
     
+    def _extract_clean_title(self, title: str) -> str:
+        """从文档标题中提取纯净的文件名"""
+        # 移除常见的文件扩展名
+        extensions = ['.remup', '.ru', '.html', '.htm']
+        for ext in extensions:
+            if title.endswith(ext):
+                title = title[:-len(ext)]
+        
+        # 如果是完整路径，只取文件名
+        if '/' in title or '\\' in title:
+            # 处理路径分隔符
+            if '/' in title:
+                parts = title.split('/')
+            else:
+                parts = title.split('\\')
+            title = parts[-1]
+        
+        # 美化标题：下划线替换为空格，首字母大写
+        title = title.replace('_', ' ').strip()
+        if title:
+            # 简单的首字母大写
+            title = ' '.join(word.capitalize() for word in title.split())
+        
+        return f"{title} - RemUp笔记" if title else "RemUp笔记"
+    
     def _collect_card_themes(self, document: Document):
         """收集所有卡片主题，用于跳转验证"""
         for archive in document.archives:
@@ -99,28 +136,34 @@ class HTMLGenerator:
     
     def _build_full_html(self, title: str, main_content: str, 
                     vibe_archive_content: str, other_archives_content: str) -> str:
-        """构建完整的HTML文档结构"""
+        """构建完整的HTML文档结构 - 使用纯净标题"""
         
-        # 如果标题是文件名，提取有意义的标题
-        if title.endswith('.ru') or title.endswith('.remup'):
-            # 使用文件名（不含扩展名）作为标题
-            title = Path(title).stem
-            # 可以进一步美化，比如将下划线替换为空格，首字母大写等
-            title = title.replace('_', ' ').title()
+        # 清理标题中的特殊字符（确保HTML安全）
+        safe_title = title.replace('"', '&quot;').replace("'", '&#39;')
         
         return f'''<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
+    <title>{safe_title}</title>
     <link rel="stylesheet" href="{self.css_file}">
+    <style>
+        /* 添加一些基本样式优化 */
+        .page-title {{
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }}
+    </style>
 </head>
 <body>
     <div class="container">
-        <!-- 页面标题 -->
+        <!-- 页面标题 - 使用纯净文件名 -->
         <header class="page-header">
-            <h1>{title}</h1>
+            <h1 class="page-title">{safe_title}</h1>
         </header>
         
         <!-- 主卡内容 -->
@@ -132,7 +175,9 @@ class HTMLGenerator:
         {vibe_archive_content}
         
         <!-- 其他归档 -->
-        {other_archives_content}
+        <nav class="other-archives">
+            {other_archives_content}
+        </nav>
     </div>
     
     <script>
@@ -260,14 +305,10 @@ class HTMLGenerator:
 </html>'''
     
     def _generate_main_content(self, archives: List[Archive]) -> str:
-        """生成主卡内容 - 添加调试"""
+        """生成主卡内容"""
         content_parts = []
         
-        print(f"生成主内容: {len(archives)} 个归档")
-        
-        for i, archive in enumerate(archives):
-            print(f"处理归档 {i}: {archive.name}, {len(archive.cards)} 张卡片")
-            
+        for archive in archives:
             # 归档标题
             archive_html = f'''
             <section class="archive-section">
@@ -276,8 +317,7 @@ class HTMLGenerator:
             '''
             
             # 归档中的卡片
-            for j, card in enumerate(archive.cards):
-                print(f"  处理卡片 {j}: {card.theme}")
+            for card in archive.cards:
                 card_html = self._generate_card(card)
                 archive_html += card_html
             
@@ -287,9 +327,7 @@ class HTMLGenerator:
             '''
             content_parts.append(archive_html)
         
-        result = '\n'.join(content_parts)
-        print(f"主内容生成完成，长度: {len(result)} 字符")
-        return result
+        return '\n'.join(content_parts)
     
     def _generate_card(self, card: MainCard) -> str:
         """生成单个卡片HTML"""
@@ -520,7 +558,7 @@ class HTMLGenerator:
     def generate_css_file(self, css_content: str = None) -> str:
         """生成独立的CSS文件"""
         if css_content is None:
-            # 这里可以放置您确认的CSS内容
+            # 使用您确认的CSS内容
             css_content = """/* ============================================
 RemUp 样式系统 v3.1 - 我觉得最好版
 ============================================ */
@@ -1127,13 +1165,14 @@ body {
     outline: 2px solid var(--remup-primary);
     outline-offset: 2px;
 }
+
 """
         
-        css_path = os.path.join(self.output_dir, self.css_file)
+        css_path = self.output_dir / self.css_file
         with open(css_path, 'w', encoding='utf-8') as f:
             f.write(css_content)
         
-        return css_path
+        return str(css_path)
 
 def print_generation_summary(document: Document, output_path: str):
     """打印生成摘要"""
@@ -1147,7 +1186,6 @@ def print_generation_summary(document: Document, output_path: str):
     print("🎉 HTML生成完成！")
     print("=" * 60)
     print(f"📁 输出文件: {output_path}")
-    print(f"📄 文档标题: {document.title}")
     print(f"📂 归档数量: {len(document.archives)}")
     print(f"🃏 卡片总数: {total_cards}")
     print(f"💡 注卡数量: {total_vibe_cards}")
@@ -1162,59 +1200,3 @@ def print_generation_summary(document: Document, output_path: str):
     print("  ✅ 行内解释功能")
     print("  ✅ 列表样式优化")
     print("=" * 60)
-
-# 完整工作流测试
-if __name__ == "__main__":
-    from lexer import Lexer
-    from parser import Parser
-    
-    # 测试用例
-    test_code = """
---<Vocabulary>--
-<+vigilant
-(>: #careful, #watchful, 近义词)
-(!: 重要)
----解释
-adj. 警惕的；警觉的；戒备的
----词组
-- be vigilant about/against/over >>对…保持警惕
-- remain/stay vigilant >>保持警惕
-- require vigilance >>（需要警惕性）
----例句
-- Citizens are urged to remain vigilant against cyber scams. `网络诈骗`[指通过互联网进行的欺诈行为] >>敦促公民对网络诈骗保持警惕
-/+>
-"""
-    
-    print("🚀 开始完整工作流测试...")
-    print("-" * 60)
-    
-    # 1. 词法分析
-    print("1. 词法分析...")
-    lexer = Lexer()
-    tokens = lexer.tokenize(test_code)
-    print("   ✅ 词法分析完成")
-    
-    # 2. 语法分析
-    print("2. 语法分析...")
-    parser = Parser(tokens, "vocabulary.remup")
-    ast = parser.parse()
-    print("   ✅ 语法分析完成")
-    
-    # 3. HTML生成
-    print("3. HTML生成...")
-    generator = HTMLGenerator()
-    output_path = generator.generate(ast, "vocabulary.html")
-    print("   ✅ HTML生成完成")
-    
-    # 4. 输出摘要
-    print_generation_summary(ast, output_path)
-    
-    print("\n🎯 完整工作流测试完成！")
-    print("✨ 生成的HTML文件包含了所有交互功能：")
-    print("   • 标签点击跳转 (#careful, #watchful)")
-    print("   • 注卡悬停显示 (网络诈骗)")
-    print("   • 注卡归档双向导航")
-    print("   • 行内解释自动换行")
-    print("   • 响应式布局适配")
-    print("\n📁 打开文件查看效果:")
-    print(f"   {output_path}")

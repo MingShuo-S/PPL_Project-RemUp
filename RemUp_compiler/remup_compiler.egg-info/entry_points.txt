@@ -1,2 +1,2 @@
 [console_scripts]
-remup = remup.main:main
+remup = remup.cli:main

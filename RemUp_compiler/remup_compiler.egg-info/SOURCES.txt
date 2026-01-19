@@ -3,6 +3,7 @@ README.md
 setup.py
 remup/__init__.py
 remup/ast_nodes.py
+remup/cli.py
 remup/compiler.py
 remup/html_generator.py
 remup/lexer.py
