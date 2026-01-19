@@ -1,0 +1,840 @@
+/* ============================================
+RemUp 紧凑主题 v3.5 - CompactStyle
+修复版本：保留所有功能，优化紧凑布局
+============================================ */
+
+/* 紧凑主题变量定义 */
+:root {
+    /* 主色调 - 保持专业但低调 */
+    --remup-primary: #2c82c9;
+    --remup-secondary: #3ac569;
+    --remup-accent: #e74c3c;
+    --remup-gray: #7f8c8d;
+    --remup-light-gray: #f5f7fa;
+    
+    /* 紧凑尺寸变量 */
+    --font-size-base: 13px;
+    --font-size-large: 1.2em;
+    --font-size-small: 0.8em;
+    --line-height-comfort: 1.4;
+    --spacing-compact: 0.6rem;
+    
+    /* 卡片颜色 - 简洁专业 */
+    --card-bg: #ffffff;
+    --card-shadow: rgba(0, 0, 0, 0.05);
+    --card-border: #e1e8ed;
+    
+    /* 区域线颜色 */
+    --region-line: #dce1e6;
+    --region-title: #6c7a89;
+    
+    /* 字体 */
+    --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'SF Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+/* 重置和基础样式 - 紧凑布局 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-main);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-comfort);
+    color: #2c3e50;
+    background: #f8f9fa;
+    padding: 10px;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: none;
+    width: 100%;
+    margin: 0 auto;
+    padding: 10px;
+}
+
+/* 页面标题样式 - 紧凑设计 */
+.page-header {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e1e8ed;
+}
+
+.page-header h1 {
+    color: var(--remup-primary);
+    margin-bottom: 5px;
+    font-size: 1.6em;
+    font-weight: 600;
+}
+
+/* ============================================
+    主卡样式 - 修复网格布局
+    ============================================ */
+.card {
+    background: var(--card-bg);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px var(--card-shadow);
+    border: 1px solid var(--card-border);
+    padding: 15px;
+    position: relative;
+    transition: all 0.15s ease;
+    width: 100%;
+    min-width: 0;
+    font-size: var(--font-size-base);
+    /* 移除 margin-bottom，由网格控制间距 */
+}
+
+.card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border-color: var(--remup-primary);
+}
+
+.card h2 {
+    color: var(--remup-primary);
+    border-bottom: 1px solid var(--remup-primary);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+    position: relative;
+    padding-left: 10px;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+}
+
+.card h2::before {
+    content: '<+';
+    color: var(--remup-gray);
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+    margin-right: 4px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.card h2::after {
+    content: '/+>';
+    color: var(--remup-gray);
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+    margin-left: 4px;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+/* ============================================
+    标签系统 - 紧凑布局
+    ============================================ */
+.labels-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+    min-height: 28px;
+    align-items: center;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 4px 8px;
+    text-decoration: none;
+    color: #495057;
+    font-size: 0.8em;
+    transition: all 0.2s ease;
+    max-width: 180px;
+    overflow: hidden;
+    border: 1px solid #dee2e6;
+    position: relative;
+    flex-shrink: 0;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.label:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.label-symbol {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid var(--remup-primary);
+    margin-right: 4px;
+    font-size: 0.7em;
+    font-weight: bold;
+    color: var(--remup-primary);
+    flex-shrink: 0;
+}
+
+.label-content {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+/* ============================================
+    归档系统 - 修复网格布局
+    ============================================ */
+.archive-section {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.archive-title {
+    font-size: 1.4em;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    border-bottom: 1px solid var(--remup-primary);
+    padding-bottom: 6px;
+    font-weight: 600;
+}
+
+/* 修复：归档卡片网格布局 */
+.archive-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+    width: 100%;
+}
+
+/* ============================================
+    区域系统 - 紧凑布局
+    ============================================ */
+.region {
+    margin: 15px 0;
+    position: relative;
+}
+
+.region-line {
+    border: none;
+    height: 1px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        var(--region-line) 20%, 
+        var(--region-line) 80%, 
+        transparent 100%);
+    margin: 6px 0 12px 0;
+    position: relative;
+}
+
+.region-title {
+    position: absolute;
+    top: -6px;
+    left: 6px;
+    background: var(--card-bg);
+    padding: 0 6px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--region-title);
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.region-content {
+    margin-top: 10px;
+    position: relative;
+}
+
+/* ============================================
+    内容样式 - 紧凑阅读
+    ============================================ */
+.content {
+    line-height: var(--line-height-comfort);
+    font-size: var(--font-size-base);
+    position: relative;
+}
+
+.content p {
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: #2c3e50;
+}
+
+/* 列表样式 - 紧凑布局 */
+.region-content ul,
+.region-content ol {
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+}
+
+.region-content li {
+    position: relative;
+    padding-left: 1em;
+    margin-bottom: 0.3em;
+    font-size: 0.9em;
+}
+
+.region-content ul li::before {
+    content: '';
+    position: absolute;
+    left: 0.1em;
+    top: 0.45em;
+    width: 0.3em;
+    height: 0.3em;
+    border-radius: 50%;
+    background-color: var(--remup-primary);
+}
+
+.region-content ol {
+    counter-reset: li-counter;
+}
+
+.region-content ol li::before {
+    content: counter(li-counter) ".";
+    counter-increment: li-counter;
+    position: absolute;
+    left: 0;
+    color: var(--remup-primary);
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+/* ============================================
+    代码块样式 - 完整功能
+    ============================================ */
+.code-block {
+    background: #f8f9fa;
+    color: #2c3e50;
+    padding: 10px;
+    border-radius: 4px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    line-height: 1.3;
+    position: relative;
+    z-index: 1;
+    border: 1px solid #e9ecef;
+    border-left: 3px solid var(--remup-primary); /* 添加左侧强调线 */
+}
+
+.code-block pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* 代码高亮样式 */
+.keyword { 
+    color: #905; 
+    font-weight: bold; 
+}
+.number { 
+    color: #690; 
+}
+.string { 
+    color: #07a; 
+}
+.comment { 
+    color: #6c7a89; 
+    font-style: italic; 
+}
+
+/* ============================================
+    行内解释 - 完整功能
+    ============================================ */
+.inline-explanation {
+    display: block;
+    color: #6c7a89;
+    opacity: 0.8;
+    font-size: 0.8em;
+    font-style: italic;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    padding-left: 12px;
+    position: relative;
+    white-space: normal;
+    word-wrap: break-word;
+    z-index: 1;
+    line-height: 1.3;
+}
+
+.inline-explanation::before {
+    content: '>>';
+    position: absolute;
+    left: 0;
+    color: var(--remup-gray);
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+}
+
+/* ============================================
+    注卡系统 - 完整功能
+    ============================================ */
+.annotation-container {
+    position: relative;
+    display: inline;
+    z-index: 10;
+}
+
+.annotation {
+    position: relative;
+    display: inline;
+    cursor: pointer;
+    color: var(--remup-primary);
+    border-bottom: 1px dashed var(--remup-primary);
+    transition: all 0.15s ease;
+    padding: 1px 2px;
+    border-radius: 2px;
+    background: rgba(44, 130, 201, 0.08);
+    z-index: 10;
+    font-size: 0.9em;
+}
+
+.annotation:hover {
+    background: rgba(44, 130, 201, 0.12);
+    border-bottom-style: solid;
+}
+
+.annotation.active {
+    background: rgba(44, 130, 201, 0.15);
+    border-bottom: 1px solid var(--remup-primary);
+    border-bottom-style: solid;
+    z-index: 10001;
+}
+
+.annotation-popup {
+    position: absolute;
+    z-index: 10000;
+    background: white;
+    border: 1px solid #dce1e6;
+    border-radius: 4px;
+    padding: 8px;
+    width: 200px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    font-size: 0.8em;
+    line-height: 1.3;
+    color: #2c3e50;
+    display: none;
+    animation: fadeIn 0.15s ease;
+    pointer-events: none;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* 如果上方空间不足，改为向下弹出 */
+.annotation-container:has(.annotation.active):not(:first-child) .annotation-popup {
+    bottom: auto;
+    top: calc(100% + 6px);
+}
+
+/* 悬停时显示 */
+.annotation-container:hover .annotation-popup {
+    display: block;
+    pointer-events: auto;
+}
+
+/* 激活状态时显示（点击后保持显示） */
+.annotation.active + .annotation-popup,
+.annotation-container:focus-within .annotation-popup {
+    display: block;
+    pointer-events: auto;
+    z-index: 10002;
+}
+
+.back-to-source {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.7em;
+    color: var(--remup-primary);
+    text-decoration: none;
+}
+
+.back-to-source:hover {
+    text-decoration: underline;
+}
+
+/* ============================================
+    归档卡片样式 - 完整功能
+    ============================================ */
+.archive-card {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e1e8ed;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.archive-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border-color: var(--remup-primary);
+}
+
+.archive-card-title {
+    font-size: 1.1em;
+    color: var(--remup-primary);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 600;
+}
+
+.archive-card-content {
+    flex: 1;
+    margin-bottom: 10px;
+    color: #5a6c7d;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.archive-card-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    background: var(--remup-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+    font-size: 0.85em;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    margin-top: auto;
+}
+
+.archive-card-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(44, 130, 201, 0.3);
+    background: #2471b3;
+}
+
+.archive-card-link::after {
+    content: '→';
+    margin-left: 6px;
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+.archive-card-link:hover::after {
+    transform: translateX(2px);
+}
+
+/* ============================================
+    注点归档样式 - 完整功能
+    ============================================ */
+.vibe-archive {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    margin: 15px 0;
+    border-left: 3px solid var(--remup-primary);
+}
+
+.vibe-archive-title {
+    color: #2c3e50;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.vibe-archive-title::before {
+    content: '📚';
+    margin-right: 8px;
+    font-size: 1.1em;
+}
+
+.vibe-archive-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+}
+
+.vibe-archive-card {
+    background: white;
+    padding: 12px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-left: 2px solid var(--remup-primary);
+    transition: all 0.15s ease;
+}
+
+.vibe-archive-card:hover {
+    transform: translateX(2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.vibe-archive-card h3 {
+    color: var(--remup-primary);
+    font-size: 1em;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.vibe-archive-item {
+    padding: 6px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.85em;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s ease;
+}
+
+.vibe-archive-item:last-child {
+    border-bottom: none;
+}
+
+.vibe-archive-item::before {
+    content: '•';
+    color: var(--remup-primary);
+    margin-right: 6px;
+    font-weight: bold;
+}
+
+.vibe-link {
+    color: var(--remup-primary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.vibe-link:hover {
+    color: #2471b3;
+    text-decoration: underline;
+    transform: translateX(2px);
+}
+
+.vibe-link::after {
+    content: '↗';
+    margin-left: 4px;
+    font-size: 0.8em;
+}
+
+/* ============================================
+    主题选择器 - 完整功能
+    ============================================ */
+.theme-selector-container {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e1e8ed;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theme-selector-container label {
+    color: #2c3e50;
+    font-weight: 500;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.theme-selector-container select {
+    background: white;
+    color: #2c3e50;
+    border: 1px solid #dce1e6;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.85em;
+    min-width: 120px;
+    cursor: pointer;
+}
+
+.theme-selector-container select:focus {
+    outline: none;
+    border-color: var(--remup-primary);
+    box-shadow: 0 0 0 2px rgba(44, 130, 201, 0.1);
+}
+
+/* ============================================
+    响应式设计 - 修复网格布局
+    ============================================ */
+@media (max-width: 768px) {
+    body {
+        padding: 8px;
+    }
+    
+    .container {
+        padding: 8px;
+    }
+    
+    /* 移动端单列布局 */
+    .archive-cards {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .vibe-archive-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .card {
+        padding: 12px;
+    }
+    
+    .vibe-archive {
+        padding: 12px;
+        margin: 12px 0;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1023px) {
+    /* 平板端两列布局 */
+    .archive-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .vibe-archive-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    /* 桌面端自适应多列布局 */
+    .archive-cards {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+    }
+    
+    .vibe-archive-cards {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+    
+    .archive-cards {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+}
+
+/* 小屏幕优化 */
+@media (max-width: 480px) {
+    .archive-card-link {
+        padding: 6px 12px;
+        font-size: 0.8em;
+    }
+    
+    .vibe-archive-item {
+        font-size: 0.8em;
+    }
+    
+    .page-header {
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.4em;
+    }
+}
+
+/* ============================================
+    工具类
+    ============================================ */
+.text-center { text-align: center; }
+.mt-1 { margin-top: 6px; }
+.mb-1 { margin-bottom: 6px; }
+
+/* 滚动锚点偏移 */
+:target {
+    scroll-margin-top: 10px;
+    background-color: rgba(255, 255, 0, 0.15);
+    transition: background-color 0.2s ease;
+}
+
+/* 焦点样式 */
+.card:focus {
+    outline: 1px solid var(--remup-primary);
+    outline-offset: 1px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateX(-50%) translateY(2px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(-50%) translateY(0); 
+    }
+}
+
+/* 打印优化 */
+@media print {
+    body {
+        background: white;
+        padding: 0;
+        font-size: 11pt;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        break-inside: avoid;
+        padding: 10px;
+        margin-bottom: 8px;
+    }
+    
+    .labels-container {
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .annotation-popup {
+        display: block !important;
+        position: relative;
+        width: 100%;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+    
+    /* 打印时隐藏主题选择器 */
+    .theme-selector-container {
+        display: none;
+    }
+    
+    /* 确保代码块在打印时可见 */
+    .code-block {
+        background: #f8f9fa !important;
+        border: 1px solid #ddd !important;
+    }
+}

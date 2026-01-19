@@ -1,6 +1,6 @@
 """RemUp编译器 - 将RemUp标记语言(.ru文件)转换为HTML"""
 
-from .compiler import compile_remup, RemUpCompiler
+from .compiler import compile_remup, Compiler
 from .html_generator import HTMLGenerator
 from .parser import Parser
 from .lexer import Lexer
@@ -19,7 +19,7 @@ __email__ = "2954809209@qq.com"
 __all__ = [
     # 主要功能类和函数
     "compile_remup",
-    "RemUpCompiler",
+    "Compiler",
     "HTMLGenerator", 
     "Parser",
     "Lexer",

@@ -36,6 +36,7 @@ RemUp 是一个创新的轻量级标记语言和编译器，专为构建"学习-
 - **📚 归档系统** - 智能知识组织，自动生成导航
 - **🎨 响应式设计** - 多设备完美适配，支持打印输出
 - **🔗 智能链接** - 标签间快速跳转，构建知识网络
+- **🖱️ 拖拽编译** - 支持文件拖拽，一键编译体验
 
 ## 🚀 快速开始
 
@@ -47,34 +48,84 @@ RemUp 是一个创新的轻量级标记语言和编译器，专为构建"学习-
 ### 安装步骤
 
 1. **克隆仓库**
-   ```bash
-   git clone https://github.com/MingShuo-S/PPL_Project-RemUp.git
-   cd PPL_Project-RemUp
-   ```
+```bash
+git clone https://github.com/MingShuo-S/PPL_Project-RemUp.git
+cd PPL_Project-RemUp
+```
 
 2. **进入编译器目录**
-   ```bash
-   cd RemUp_Compiler  # 重要：所有源代码都在此子目录中
-   ```
+```bash
+cd RemUp_Compiler
+```
 
 3. **创建虚拟环境（推荐）**
-   ```bash
-   python -m venv venv
-   # 激活环境
-   source venv/bin/activate  # Linux/macOS
-   # 或
-   venv\Scripts\activate     # Windows
-   ```
+```bash
+python -m venv venv
+# 激活环境
+source venv/bin/activate  # Linux/macOS
+venv\Scripts\activate    # Windows
+```
 
 4. **安装依赖**
-   ```bash
-   pip install -r requirements.txt
-   ```
+```bash
+pip install -e .
+```
 
 5. **验证安装**
-   ```bash
-   remup --help
-   ```
+```bash
+remup --help
+```
+
+## 💡 使用方式
+
+### 1. 命令行编译（推荐）
+
+使用`remup`命令进行编译：
+
+```bash
+# 编译单个文件
+remup examples/vocabulary.remup
+
+# 编译整个目录
+remup examples/ -d
+
+# 指定输出文件
+remup examples/vocabulary.remup -o my_notes.html
+
+# 使用自定义CSS样式
+remup examples/vocabulary.remup -c custom_style.css
+```
+
+### 2. 拖拽编译（便捷方式）
+
+将`.remup`文件拖拽到`compile_remup.py`脚本上即可自动编译：
+
+1. 定位到`compile_remup.py`文件
+2. 将任意`.remup`文件拖拽到该脚本上
+3. 脚本自动完成编译，输出文件在同目录生成
+
+**特性：**
+- ✅ 自动检测文件类型
+- ✅ 输出文件与源文件同目录
+- ✅ 批量文件支持
+- ✅ 详细编译日志
+
+### 3. Python API 调用
+
+```python
+from remup.compiler import compile_remup
+
+# 基本编译
+result_path = compile_remup("my_notes.remup")
+print(f"编译完成: {result_path}")
+
+# 高级选项
+result_path = compile_remup(
+    "my_notes.remup", 
+    "output.html",
+    css_file="custom_style.css"
+)
+```
 
 ## 📝 语法指南
 
@@ -104,10 +155,10 @@ RemUp 是一个创新的轻量级标记语言和编译器，专为构建"学习-
 是组织代码的基本单元，提高代码的复用性和可读性。
 
 ---语法
-    ```python
-    def greet(name: str) -> str:
-        return f"Hello, {name}!"
-    ```
+      ```python
+      def greet(name: str) -> str:
+         return f"Hello, {name}!"
+      ```
 
 ---示例
 - 定义函数时使用 `def` 关键字
@@ -123,56 +174,28 @@ RemUp 是一个创新的轻量级标记语言和编译器，专为构建"学习-
 /+>
 ```
 
-## 💡 使用示例
-
-### 基本使用
-
-```bash
-# 编译单个 .ru 文件（在 RemUp_Compiler 目录下执行）
-remup examples/vocabulary.ru
-
-# 指定输出文件
-remup examples/vocabulary.ru -o my_notes.html
-
-# 使用自定义CSS样式
-remup examples/vocabulary.ru -c custom_style.css
-```
-
-### Python API 使用
-
-```python
-from remup import compile_remup
-
-# 基本编译
-result_path = compile_remup("my_notes.ru")
-print(f"编译完成: {result_path}")
-
-# 高级选项
-result_path = compile_remup(
-    "my_notes.ru", 
-    "output.html",
-    css_file="custom_style.css"
-)
-```
-
-### 项目结构说明
+## 📁 项目结构
 
 ```
-RemUp/                          # 主仓库根目录
-│
-├── RemUp_Compiler/             # 🔥 编译器主目录（用户需要进入这里）
-│   ├── remup/                 # Python包源代码
-│   │   ├── __init__.py        # 包初始化
-│   │   ├── lexer.py           # 词法分析器
-│   │   ├── parser.py          # 语法解析器
-│   │   ├── compiler.py        # 编译器核心
-│   │   └── html_generator.py  # HTML生成器
-│   ├── examples/              # 示例文件
-│   ├── tests/                 # 测试用例
-│   ├── requirements.txt       # Python依赖
-│   └── setup.py              # 包安装配置
-│
-└── README.md                 # 项目说明文档
+RemUp_Compiler/
+├── remup/                 # 编译器核心包
+│   ├── __init__.py
+│   ├── main.py           # 命令行入口点
+│   ├── cli.py            # 🔥 新增：CLI接口
+│   ├── compiler.py       # 编译器协调器
+│   ├── lexer.py          # 词法分析器
+│   ├── parser.py         # 语法解析器
+│   ├── ast_nodes.py      # AST节点定义
+│   └── html_generator.py # HTML生成器
+├── compile_remup.py      # 🔥 新增：拖拽编译脚本
+├── examples/             # 示例文件
+│   ├── vocabulary.remup
+│   ├── programming.remup
+│   └── concepts.remup
+├── tests/                # 测试用例
+├── setup.py              # 包配置
+├── requirements.txt      # 依赖列表
+└── README.md            # 项目说明
 ```
 
 ## 🛠️ 开发指南
@@ -187,7 +210,7 @@ cd RemUp_Compiler
 python -m pytest tests/
 
 # 运行特定测试
-python -m pytest tests/test_basic.py
+python -m pytest tests/test_compiler.py
 ```
 
 ### 项目架构
@@ -213,11 +236,11 @@ RemUp编译器采用标准的编译器架构：
 
 ### 贡献方式
 
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+1. **Fork** 本仓库
+2. **创建特性分支** (`git checkout -b feature/AmazingFeature`)
+3. **提交更改** (`git commit -m 'Add some AmazingFeature'`)
+4. **推送到分支** (`git push origin feature/AmazingFeature`)
+5. **开启 Pull Request**
 
 ### 开发重点
 
@@ -229,20 +252,23 @@ RemUp编译器采用标准的编译器架构：
 
 ## ❓ 常见问题
 
-### Q: 为什么需要在 RemUp_Compiler 目录下执行命令？
-A: 因为所有源代码和配置文件都位于 `RemUp_Compiler` 子目录中，这是Python包的根目录。
-
-### Q: 出现模块导入错误怎么办？
+### Q: 拖拽编译不工作怎么办？
 A: 确保：
-1. 已在 `RemUp_Compiler` 目录中
-2. 虚拟环境已激活
-3. 已运行 `pip install -e .`
+1. 已安装Python并配置环境变量
+2. 已运行 `pip install -e .` 安装依赖
+3. 文件扩展名为 `.remup`
 
-### Q: 如何自定义样式？
+### Q: 如何自定义输出样式？
 A: 创建自定义CSS文件，使用 `-c` 参数指定：
 ```bash
-remup my_notes.ru -c custom_style.css
+remup my_notes.remup -c custom_style.css
 ```
+
+### Q: 注卡功能不显示怎么办？
+A: 检查注卡语法格式：`` `内容`[批注] ``，确保使用反引号包裹内容，方括号包裹批注。
+
+### Q: 标签跳转失效？
+A: 确保跳转目标存在，标签格式为 `(>: #target_id)`，且 `target_id` 与实际卡片主题一致。
 
 ## 📄 许可证
 
