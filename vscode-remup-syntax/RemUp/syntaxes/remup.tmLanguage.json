@@ -1,0 +1,252 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "RemUp",
+	"patterns": [
+		{
+			"include": "#archive"
+		},
+		{
+			"include": "#card"
+		},
+		{
+			"include": "#region"
+		},
+		{
+			"include": "#code-block"
+		},
+		{
+			"include": "#vibe-card"
+		},
+		{
+			"include": "#inline-explanation"
+		},
+		{
+			"include": "#list"
+		},
+		{
+			"include": "#bold-text"
+		},
+		{
+			"include": "#label"
+		},
+		{
+			"include": "#comments"
+		}
+	],
+	"repository": {
+		"archive": {
+			"name": "meta.archive.remup",
+			"match": "^\\s*(--<)([^>]+)(>--)\\s*$",
+			"captures": {
+				"1": {
+					"name": "keyword.control.archive.start.remup"
+				},
+				"2": {
+					"name": "entity.name.archive.remup"
+				},
+				"3": {
+					"name": "keyword.control.archive.end.remup"
+				}
+			}
+		},
+		
+		"card": {
+			"name": "meta.card.remup",
+			"begin": "^\\s*(<\\+)([^/]+)\\s*$",
+			"end": "^\\s*(/\\+>)\\s*$",
+			"beginCaptures": {
+				"1": {
+					"name": "keyword.control.card.start.remup"
+				},
+				"2": {
+					"name": "entity.name.title.card.remup"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "keyword.control.card.end.remup"
+				}
+			},
+			"patterns": [
+				{
+					"include": "#label"
+				},
+				{
+					"include": "#region"
+				},
+				{
+					"include": "#list"
+				},
+				{
+					"include": "#vibe-card"
+				},
+				{
+					"include": "#inline-explanation"
+				},
+				{
+					"include": "#bold-text"
+				},
+				{
+					"match": ".+",
+					"name": "string.quoted.other.remup"
+				}
+			]
+		},
+		
+		"label": {
+			"name": "meta.label.remup",
+			"match": "^\\s*\\(([^:]+):\\s*([^)]+)\\)\\s*$",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.tag-symbol.remup"
+				},
+				"2": {
+					"name": "string.quoted.label-content.remup"
+				}
+			}
+		},
+		
+		"region": {
+			"name": "meta.region.remup",
+			"match": "^\\s*(---)\\s*([^\\s].*?)\\s*$",
+			"captures": {
+				"1": {
+					"name": "keyword.control.region.remup"
+				},
+				"2": {
+					"name": "entity.name.section.remup"
+				}
+			}
+		},
+		
+		"code-block": {
+			"name": "markup.code.block.remup",
+			"begin": "^\\s*(```)\\s*(\\w*)\\s*$",
+			"end": "^\\s*(```)\\s*$",
+			"beginCaptures": {
+				"1": {
+					"name": "punctuation.definition.code.begin.remup"
+				},
+				"2": {
+					"name": "entity.name.type.language.remup"
+				}
+			},
+			"endCaptures": {
+				"1": {
+					"name": "punctuation.definition.code.end.remup"
+				}
+			},
+			"contentName": "meta.embedded.source",
+			"patterns": [
+				{
+					"match": ".+",
+					"name": "variable.parameter.code-content.remup"
+				}
+			]
+		},
+		
+		"list": {
+			"patterns": [
+				{
+					"name": "markup.list.ordered.remup",
+					"match": "^\\s*(\\d+\\.)\\s+(.*)$",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.list-item.ordered.remup"
+						},
+						"2": {
+							"patterns": [
+								{
+									"include": "#inline-content"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "markup.list.unordered.remup",
+					"match": "^\\s*(-)\\s+(.*)$",
+					"captures": {
+						"1": {
+							"name": "punctuation.definition.list-item.unordered.remup"
+						},
+						"2": {
+							"patterns": [
+								{
+									"include": "#inline-content"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		
+		"vibe-card": {
+			"name": "meta.vibe-card.inline.remup",
+			"match": "(`)([^`\\n]+)(`)(\\[)([^\\]\\n]*)(\\])",
+			"captures": {
+				"1": {
+					"name": "punctuation.definition.vibe.begin.remup"
+				},
+				"2": {
+					"name": "entity.name.vibe-content.remup"
+				},
+				"3": {
+					"name": "punctuation.definition.vibe.end.remup"
+				},
+				"4": {
+					"name": "punctuation.definition.annotation.begin.remup"
+				},
+				"5": {
+					"name": "string.quoted.annotation.remup"
+				},
+				"6": {
+					"name": "punctuation.definition.annotation.end.remup"
+				}
+			}
+		},
+		
+		"inline-explanation": {
+			"name": "meta.inline-explanation.remup",
+			"match": ">>\\s*([^\\n]+)",
+			"captures": {
+				"0": {
+					"name": "punctuation.definition.explanation.remup"
+				},
+				"1": {
+					"name": "string.unquoted.explanation.remup"
+				}
+			}
+		},
+		
+		"bold-text": {
+			"name": "markup.bold.remup",
+			"match": "\\*\\*([^*]+)\\*\\*"
+		},
+		
+		"inline-content": {
+			"patterns": [
+				{
+					"include": "#vibe-card"
+				},
+				{
+					"include": "#inline-explanation"
+				},
+				{
+					"include": "#bold-text"
+				}
+			]
+		},
+		
+		"comments": {
+			"patterns": [
+				{
+					"name": "comment.line.remup",
+					"match": "#.*$"
+				}
+			]
+		}
+	},
+	"scopeName": "source.remup"
+}

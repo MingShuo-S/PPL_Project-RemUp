@@ -1,0 +1,2 @@
+[console_scripts]
+remup = remup.main:main

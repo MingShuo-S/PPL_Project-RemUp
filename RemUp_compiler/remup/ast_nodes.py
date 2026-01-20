@@ -55,15 +55,42 @@ class Inline_Explanation:
     输入多行请用注卡"""
 
 @dataclass
-class Rem_List:
-    category: str = "Unordered" # 类别：Unordered Ordered
-    lines: List[str] = field(default_factory=list)
-
-    def to_dict(self) ->dict:
+class ListItem:
+    """列表项节点"""
+    content: str                    # 列表项内容
+    vibe_cards: List[VibeCard] = field(default_factory=list)  # 列表项中的注卡
+    line_number: int = 0           # 原始行号（用于调试）
+    
+    def to_dict(self) -> dict:
         """转换为字典格式"""
-        return{
+        return {
+            'content': self.content,
+            'vibe_cards': [vc.to_dict() for vc in self.vibe_cards],
+            'line_number': self.line_number
+        }
+
+@dataclass
+class Rem_List:
+    """列表节点 - 修复列表处理"""
+    list_type: str  # 'ul' 或 'ol'（无序或有序）
+    items: List[ListItem] = field(default_factory=list)  # 列表项
+    category: str = "unordered"  # 兼容旧版本：unordered/ordered
+    
+    def __post_init__(self):
+        """初始化后处理，确保兼容性"""
+        # 根据list_type设置category
+        if self.list_type == 'ul':
+            self.category = "unordered"
+        elif self.list_type == 'ol':
+            self.category = "unordered"
+    
+    def to_dict(self) -> dict:
+        """转换为字典格式"""
+        return {
+            'list_type': self.list_type,
             'category': self.category,
-            'lines': [line for line in self.lines]
+            'items': [item.to_dict() for item in self.items],
+            'lines': [item.content for item in self.items]  # 兼容旧版本
         }
     
 @dataclass
@@ -81,12 +108,14 @@ class Code_Block:
 
 @dataclass
 class Region:
-    """区域节点"""
+    """区域节点 - 修复列表处理"""
     name: str              # 区域名称
     content: str           # 区域内容文本
     lines: List[str] = field(default_factory=list)  # 按行存储的内容
     vibe_cards: List[VibeCard] = field(default_factory=list)  # 区域内的注点
-    inline_explanations: dict = field(default_factory=dict)  # 行内解释 {行号: 解释}
+    inline_explanations: Dict[int, Inline_Explanation] = field(default_factory=dict)  # 行内解释 {行号: 解释}
+    lists: List[Rem_List] = field(default_factory=list)  # 新增：区域内的列表
+    code_blocks: List[Code_Block] = field(default_factory=list)  # 新增：代码块
     
     def to_dict(self) -> dict:
         """转换为字典格式"""
@@ -95,9 +124,11 @@ class Region:
             'content': self.content,
             'lines': self.lines,
             'vibe_cards': [vc.to_dict() for vc in self.vibe_cards],
-            'inline_explanations': self.inline_explanations
+            'inline_explanations': {k: v.to_dict() for k, v in self.inline_explanations.items()},
+            'lists': [lst.to_dict() for lst in self.lists],
+            'code_blocks': [cb.to_dict() for cb in self.code_blocks]
         }
-
+    
 @dataclass
 class MainCard:
     """主卡节点"""

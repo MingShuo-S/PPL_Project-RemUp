@@ -3,7 +3,7 @@ from typing import List, Tuple, Optional
 
 class Lexer:
     """
-    词法分析器 - 根据语法规则将输入文本分解为词法标记
+    词法分析器 - 修复列表项内容提取问题
     """
     
     # 定义词法规则（正则表达式模式）
@@ -17,8 +17,8 @@ class Lexer:
         'inline_explanation': re.compile(r'>>\s*([^\n]+?)\s*$'),
         'code_block_start': re.compile(r'^```\s*(\w*)\s*$'),
         'code_block_end': re.compile(r'^```\s*$'),
-        'ordered_list': re.compile(r'^\d+\.\s+(.*)$'),
-        'unordered_list': re.compile(r'^-\s+(.*)$'),
+        'ordered_list': re.compile(r'^(\d+\.\s+.*)$'),  # 修复：捕获整个列表项
+        'unordered_list': re.compile(r'^(-\\s+.*)$'),    # 修复：捕获整个列表项
         'bold_text': re.compile(r'\*\*(.*?)\*\*'),
         'empty_line': re.compile(r'^\s*$')
     }
@@ -31,15 +31,7 @@ class Lexer:
         self.current_code_block_content = []
     
     def tokenize(self, text: str) -> List[Tuple[str, str, int]]:
-        """
-        将输入文本分解为词法标记
-        
-        Args:
-            text: 输入文本
-            
-        Returns:
-            List[Tuple[str, str, int]]: 词法标记列表 (类型, 值, 行号)
-        """
+        """将输入文本分解为词法标记"""
         self.tokens = []
         self.current_line_num = 0
         self.in_code_block = False
@@ -53,7 +45,6 @@ class Lexer:
     
     def _process_line(self, line: str):
         """处理单行文本"""
-        
         # 处理代码块状态
         if self.in_code_block:
             if self.PATTERNS['code_block_end'].match(line):
@@ -108,11 +99,11 @@ class Lexer:
             self.tokens.append(('REGION', region_match.group(1), self.current_line_num))
             return
         
-        # 处理行内元素（标签、注卡、行内解释、列表等）
+        # 处理行内元素
         self._process_inline_elements(line)
     
     def _process_inline_elements(self, line: str):
-        """处理行内的各种元素（完整修复版）"""
+        """处理行内的各种元素 - 修复列表项中的内联元素"""
         # 首先检查是否是标签（标签通常独立成行）
         label_match = self.PATTERNS['label'].match(line)
         if label_match:
@@ -126,15 +117,23 @@ class Lexer:
         unordered_match = self.PATTERNS['unordered_list'].match(line)
         
         if ordered_match or unordered_match:
-            # 提取列表项内容
-            list_content = ordered_match.group(1) if ordered_match else unordered_match.group(1)
+            # 提取完整的列表项内容（包括标记）
+            list_content = line.strip()
+            
+            print(f"🔍 LEXER: 列表项内容='{list_content}'")
             
             # 标记列表项开始
             list_type = 'ORDERED_LIST_ITEM' if ordered_match else 'UNORDERED_LIST_ITEM'
-            self.tokens.append((list_type, '', self.current_line_num))
+            self.tokens.append((list_type, list_content, self.current_line_num))
             
             # 处理列表项内容中的行内元素
-            self._process_line_content(list_content)
+            # 修复：提取内容部分（去掉列表标记）
+            if ordered_match:
+                content = ordered_match.group(1).strip()
+            else:
+                content = unordered_match.group(1).strip()
+                
+            self._process_line_content(content)
             return
         
         # 处理普通行内容

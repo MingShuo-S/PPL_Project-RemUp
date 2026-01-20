@@ -2,11 +2,11 @@ import re
 from typing import List, Tuple, Optional, Dict, Any
 from remup.ast_nodes import (
     Document, Archive, MainCard, Region, Label, 
-    VibeCard, Inline_Explanation, Rem_List, Code_Block, VibeArchive
+    VibeCard, Inline_Explanation, Code_Block, VibeArchive
 )
 
 class Parser:
-    """语法分析器 - 完整修复注卡解析问题"""
+    """语法分析器 - 简化列表处理，避免重复"""
     
     def __init__(self, tokens: List[Tuple[str, str, int]], source_name: str = "Generated Document"):
         self.tokens = tokens
@@ -19,7 +19,6 @@ class Parser:
         self.current_archive = None
         self.current_card = None
         self.current_region = None
-        self.current_list = None
         
     def advance(self):
         """前进到下一个token"""
@@ -28,13 +27,6 @@ class Parser:
             self.current_token = self.tokens[self.position]
         else:
             self.current_token = None
-    
-    def peek(self, offset: int = 1) -> Optional[Tuple[str, str, int]]:
-        """查看前方第offset个token"""
-        peek_pos = self.position + offset
-        if 0 <= peek_pos < len(self.tokens):
-            return self.tokens[peek_pos]
-        return None
 
     def parse(self) -> Document:
         """解析整个文档"""
@@ -129,8 +121,70 @@ class Parser:
         
         return labels
     
+    def parse_list_item(self, region: Region, list_type: str):
+        """解析列表项 - 修复内联元素处理"""
+        if not self.current_token or self.current_token[0] not in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
+            return
+        
+        # 获取完整的列表项内容（包括列表标记）
+        full_content = self.current_token[1]
+        
+        # 提取内容部分（去掉列表标记）
+        if list_type == 'UNORDERED_LIST_ITEM':
+            # 无序列表：格式为 "- 内容"
+            content = full_content[2:].strip() if full_content.startswith('- ') else full_content
+        else:
+            # 有序列表：格式为 "1. 内容"
+            # 使用正则表达式去掉数字和点
+            import re
+            content = re.sub(r'^\d+\.\s*', '', full_content).strip()
+        
+        print(f"🔍 PARSER: 解析列表项: 类型={list_type}, 内容='{content}'")
+        
+        # 添加到区域行
+        region.lines.append(content)
+        current_line_index = len(region.lines) - 1
+        
+        # 处理列表项中的行内元素
+        self._process_list_item_content(region, current_line_index, content)
+        
+        self.advance()
+
+    def _process_list_item_content(self, region: Region, line_index: int, content: str):
+        """处理列表项内容中的行内元素 - 修复版本"""
+        # 1. 处理注卡
+        vibe_card_matches = re.finditer(r'`([^`]+)`\[([^\]]+)\]', content)
+        for match in vibe_card_matches:
+            card_content = match.group(1).strip()
+            annotation = match.group(2).strip()
+            
+            vibe_card = VibeCard(
+                id=self.vibe_card_counter,
+                content=card_content,
+                annotation=annotation,
+                source_card=self.current_card.theme if self.current_card else ""
+            )
+            
+            # 添加到区域和卡片
+            region.vibe_cards.append(vibe_card)
+            if self.current_card:
+                self.current_card.vibe_cards.append(vibe_card)
+            
+            self.vibe_card_counter += 1
+        
+        # 2. 处理行内解释
+        inline_exp_match = re.search(r'>>\s*([^>>]+?)\s*$', content)
+        if inline_exp_match:
+            explanation = inline_exp_match.group(1).strip()
+            
+            # 创建行内解释对象
+            inline_explanation = Inline_Explanation(content, explanation)
+            region.inline_explanations[line_index] = inline_explanation
+            
+            print(f"🔍 列表项行内解释: 行{line_index}: {explanation}")
+    
     def parse_region(self) -> Optional[Region]:
-        """解析区域定义 - 核心修复"""
+        """解析区域定义 - 修复列表项处理"""
         if not self.current_token or self.current_token[0] != 'REGION':
             return None
         
@@ -144,14 +198,15 @@ class Parser:
         while self.current_token and self.current_token[0] not in ['REGION', 'CARD_END']:
             token_type, token_value, _ = self.current_token
             
-            if token_type == 'TEXT':
-                self.parse_text_line(region)
+            if token_type in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
+                # 专门处理列表项
+                self.parse_list_item(region, token_type)
+            elif token_type == 'TEXT':
+                self.parse_text_line(region, token_type)
             elif token_type == 'VIBE_CARD':
                 self.parse_vibe_card(region)
             elif token_type == 'INLINE_EXPLANATION':
                 self.parse_inline_explanation(region)
-            elif token_type in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
-                self.parse_list_item(region, token_type)
             elif token_type == 'CODE_BLOCK_START':
                 self.parse_code_block(region)
             else:
@@ -161,17 +216,41 @@ class Parser:
         region.content = '\n'.join(region.lines)
         return region
     
-    def parse_text_line(self, region: Region):
-        """解析文本行"""
-        if not self.current_token or self.current_token[0] != 'TEXT':
+    def parse_text_line(self, region: Region, token_type: str):
+        """解析文本行 - 统一处理普通文本和列表项"""
+        if not self.current_token or self.current_token[0] not in ['TEXT', 'UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
             return
         
         content = self.current_token[1]
+        
+        # 直接将内容添加到区域行中
+        # HTML生成器会根据内容判断是否是列表项
         region.lines.append(content)
+        
+        # 检查内容中是否包含注卡
+        vibe_card_match = re.search(r'`([^`]+)`\[([^\]]+)\]', content)
+        if vibe_card_match:
+            card_content = vibe_card_match.group(1).strip()
+            annotation = vibe_card_match.group(2).strip()
+            
+            vibe_card = VibeCard(
+                id=self.vibe_card_counter,
+                content=card_content,
+                annotation=annotation,
+                source_card=self.current_card.theme if self.current_card else ""
+            )
+            
+            # 添加到区域和卡片
+            region.vibe_cards.append(vibe_card)
+            if self.current_card:
+                self.current_card.vibe_cards.append(vibe_card)
+            
+            self.vibe_card_counter += 1
+        
         self.advance()
     
     def parse_vibe_card(self, region: Region):
-        """解析注卡 - 关键修复"""
+        """解析注卡"""
         if not self.current_token or self.current_token[0] != 'VIBE_CARD':
             return
         
@@ -218,43 +297,6 @@ class Parser:
         
         self.advance()
     
-    def parse_list_item(self, region: Region, list_type: str):
-        """解析列表项"""
-        if not self.current_token or self.current_token[0] not in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
-            return
-        
-        content = self.current_token[1]
-        
-        # 检查内容中是否包含注卡
-        vibe_cards = []
-        match = re.match(r'([^\[\]]+)\[([^\]]+)\]', content)
-        if match:
-            card_content = match.group(1).strip()
-            annotation = match.group(2).strip()
-            
-            vibe_card = VibeCard(
-                id=self.vibe_card_counter,
-                content=card_content,
-                annotation=annotation,
-                source_card=self.current_card.theme if self.current_card else ""
-            )
-            vibe_cards.append(vibe_card)
-            self.vibe_card_counter += 1
-            
-            # 用内容替换标记
-            content = card_content
-        
-        # 添加到区域行
-        region.lines.append(content)
-        
-        # 处理注卡
-        if vibe_cards:
-            region.vibe_cards.extend(vibe_cards)
-            if self.current_card:
-                self.current_card.vibe_cards.extend(vibe_cards)
-        
-        self.advance()
-    
     def parse_code_block(self, region: Region):
         """解析代码块"""
         if not self.current_token or self.current_token[0] != 'CODE_BLOCK_START':
@@ -281,7 +323,7 @@ class Parser:
             code_block = Code_Block(language, code_content)
             
             # 将代码块作为特殊行添加到区域
-            region.lines.append(f"CODE_BLOCK:{language}")
+            region.lines.append(f"```{language}\n{code_content}\n```")
     
     def build_vibe_archive(self, archives: List[Archive]) -> Optional[VibeArchive]:
         """构建注卡归档"""

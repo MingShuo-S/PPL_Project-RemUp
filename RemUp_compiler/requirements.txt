@@ -3,6 +3,9 @@
 Jinja2>=3.1.2
 markdown>=3.4.0
 Pygments>=2.15.0
+setuptools>=62.0.0
+watchdog>=2.1.6
+websockets>=10.2
 
 # 开发与测试依赖（通常放在requirements-dev.txt中，见下文）
 # pytest>=7.0.0

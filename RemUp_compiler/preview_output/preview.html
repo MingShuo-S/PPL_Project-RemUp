@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Document - RemUp笔记</title>
+    <link rel="stylesheet" href="RemStyle.css" id="mainStylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 主题选择器 -->
+        
+        <div class="theme-selector-container">
+            <label for="themeSelector">主题选择:</label>
+            <select id="themeSelector" onchange="changeTheme(this.value)">
+                <option value="CompactStyle" >CompactStyle</option><option value="DarkTheme" >DarkTheme</option><option value="RemStyle" selected>RemStyle</option>
+            </select>
+        </div>
+        
+        
+        <!-- 页面标题 -->
+        <header class="page-header">
+            <h1 class="page-title">Generated Document - RemUp笔记</h1>
+        </header>
+        
+        <!-- 主卡内容 -->
+        <main class="main-content">
+            
+        </main>
+        
+        <!-- 注卡归档 -->
+        
+        
+        <!-- 其他归档 -->
+        <nav class="other-archives">
+            
+        </nav>
+    </div>
+    
+    <script>
+        // 主题切换功能
+        function changeTheme(themeName) {
+            const stylesheet = document.getElementById('mainStylesheet');
+            stylesheet.href = themeName + '.css';
+            
+            // 保存用户选择到本地存储
+            localStorage.setItem('preferredTheme', themeName);
+        }
+        
+        // 页面加载时应用保存的主题
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('preferredTheme');
+            if (savedTheme) {
+                const selector = document.getElementById('themeSelector');
+                if (selector) {
+                    selector.value = savedTheme;
+                    changeTheme(savedTheme);
+                }
+            }
+        });
+        
+        // 原有的交互功能
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. 标签跳转功能
+            const labelLinks = document.querySelectorAll('.label-link');
+            labelLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        targetElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                        setTimeout(() => {
+                            targetElement.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            });
+
+            // 2. 注卡跳转功能
+            const vibeLinks = document.querySelectorAll('.vibe-link, .back-to-source');
+            vibeLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        if (targetElement.classList.contains('annotation')) {
+                            targetElement.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                            setTimeout(() => {
+                                targetElement.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }
+                });
+            });
+
+            // 3. 归档导航跳转
+            const archiveLinks = document.querySelectorAll('.archive-card-link');
+            archiveLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetId = this.getAttribute('href');
+                    const targetElement = document.querySelector(targetId);
+                    
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'start' 
+                        });
+                    }
+                });
+            });
+
+            // 4. 注卡悬停效果优化
+            const annotations = document.querySelectorAll('.annotation');
+            annotations.forEach(annotation => {
+                annotation.addEventListener('mouseenter', function() {
+                    annotations.forEach(a => a.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // 5. 响应式网格布局调整
+            function adjustGridLayout() {
+                const archiveCards = document.querySelectorAll('.archive-cards');
+                const screenWidth = window.innerWidth;
+                
+                archiveCards.forEach(container => {
+                    if (screenWidth >= 1200) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+                    } else if (screenWidth >= 1024) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                    } else if (screenWidth >= 768) {
+                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+                    } else {
+                        container.style.gridTemplateColumns = '1fr';
+                    }
+                });
+            }
+
+            adjustGridLayout();
+            window.addEventListener('resize', adjustGridLayout);
+
+            // 6. 页面加载时的锚点跳转处理
+            if (window.location.hash) {
+                const targetElement = document.querySelector(window.location.hash);
+                if (targetElement) {
+                    setTimeout(() => {
+                        targetElement.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                }
+            }
+
+            // 7. 键盘导航支持
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    annotations.forEach(annotation => {
+                        annotation.classList.remove('active');
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

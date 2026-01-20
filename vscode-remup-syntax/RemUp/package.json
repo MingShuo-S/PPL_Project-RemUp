@@ -1,0 +1,25 @@
+{
+  "name": "RemUp",
+  "displayName": "RemUp Syntax Highlighting",
+  "description": "a markup language to empower note system on PC",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.108.1"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "remup",
+      "aliases": ["RemUp", "remup"],
+      "extensions": [".remup .ru"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "remup",
+      "scopeName": "source.remup source.ru",
+      "path": "./syntaxes/remup.tmLanguage.json"
+    }]
+  }
+}

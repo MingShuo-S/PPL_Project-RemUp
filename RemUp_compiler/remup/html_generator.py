@@ -570,34 +570,110 @@ class HTMLGenerator:
         '''
     
     def _process_region_content(self, region: Region) -> str:
-        """处理区域内容，包括行内解释和注卡"""
-        if not region.lines:
-            return ""
+        """处理区域内容 - 修复列表项内联元素处理"""
+        content_parts = []
         
-        lines_with_explanations = []
+        # 记录当前列表状态
+        current_list_type = None  # 'ul' 或 'ol'
+        current_list_items = []
+        current_list_line_indices = []  # 记录每个列表项对应的原始行号
+        
+        def flush_current_list():
+            """将当前列表生成HTML并添加到内容中"""
+            nonlocal current_list_type, current_list_items, current_list_line_indices
+            if current_list_items:
+                # 生成列表HTML
+                list_tag = 'ul' if current_list_type == 'ul' else 'ol'
+                items_html = []
+                
+                for i, (item_content, line_index) in enumerate(zip(current_list_items, current_list_line_indices)):
+                    # 处理列表项中的注卡和行内解释
+                    processed_item = self._process_list_item_content(item_content, line_index, region)
+                    items_html.append(f'<li>{processed_item}</li>')
+                
+                list_html = f'<{list_tag} class="region-list">{"".join(items_html)}</{list_tag}>'
+                content_parts.append(list_html)
+                current_list_items.clear()
+                current_list_line_indices.clear()
+            current_list_type = None
         
         for i, line in enumerate(region.lines):
-            # 处理注卡：检查当前行是否有对应的注卡
-            processed_line = line
-            for vibe_card in region.vibe_cards:
-                if vibe_card.content == line.strip():
-                    # 生成注卡HTML
-                    vibe_html = self._generate_vibe_card_html(vibe_card)
-                    processed_line = vibe_html
-                    break
+            # 检查是否是列表项
+            is_unordered = line.strip().startswith('- ')
+            is_ordered = re.match(r'^\d+\.\s+', line.strip())
             
-            # 检查行内解释
-            inline_exp = region.inline_explanations.get(i)
-            
-            if inline_exp and isinstance(inline_exp, Inline_Explanation):
-                # 添加行内解释
-                line_with_exp = f'{processed_line}<span class="inline-explanation">{inline_exp.content}</span>'
-                lines_with_explanations.append(f'<p>{line_with_exp}</p>')
+            if is_unordered or is_ordered:
+                # 确定列表类型
+                new_list_type = 'ul' if is_unordered else 'ol'
+                
+                # 如果列表类型改变，完成当前列表
+                if new_list_type != current_list_type:
+                    flush_current_list()
+                    current_list_type = new_list_type
+                
+                # 提取列表项内容
+                if is_unordered:
+                    content = line.strip()[2:].strip()  # 去掉 "- "
+                else:
+                    # 去掉数字和点
+                    content = re.sub(r'^\d+\.\s*', '', line.strip()).strip()
+                
+                # 添加到当前列表（保留原始行号）
+                if content.strip():  # 只有有内容时才添加
+                    current_list_items.append(content)
+                    current_list_line_indices.append(i)  # 记录原始行号
+                
             else:
-                # 普通行
-                lines_with_explanations.append(f'<p>{processed_line}</p>')
+                # 非列表行，完成当前列表
+                flush_current_list()
+                
+                # 处理普通文本行
+                processed_line = self._process_single_line(line, i, region)
+                if processed_line.strip():  # 只有有内容时才添加
+                    content_parts.append(f'<p>{processed_line}</p>')
         
-        return '\n'.join(lines_with_explanations)
+        # 处理末尾的列表
+        flush_current_list()
+        
+        return '\n'.join(content_parts)
+
+    def _process_list_item_content(self, content: str, line_index: int, region: Region) -> str:
+        """处理列表项内容中的行内元素 - 修复版本"""
+        processed_content = content
+        
+        # 1. 处理注卡
+        for vibe_card in region.vibe_cards:
+            if vibe_card.content in processed_content:
+                vibe_html = self._generate_vibe_card_html(vibe_card)
+                processed_content = processed_content.replace(vibe_card.content, vibe_html)
+        
+        # 2. 处理行内解释
+        inline_exp = region.inline_explanations.get(line_index)
+        if inline_exp and hasattr(inline_exp, 'content'):
+            # 添加行内解释
+            explanation_html = f'<span class="inline-explanation">{inline_exp.content}</span>'
+            processed_content += explanation_html
+        
+        return processed_content
+
+    def _process_single_line(self, line: str, line_index: int, region: Region) -> str:
+        """处理单行文本，包括注卡和行内解释"""
+        processed_line = line
+        
+        # 处理注卡
+        for vibe_card in region.vibe_cards:
+            if vibe_card.content in processed_line:
+                vibe_html = self._generate_vibe_card_html(vibe_card)
+                processed_line = processed_line.replace(vibe_card.content, vibe_html)
+        
+        # 处理行内解释
+        inline_exp = region.inline_explanations.get(line_index)
+        if inline_exp and hasattr(inline_exp, 'content'):
+            # 添加行内解释
+            explanation_html = f'<span class="inline-explanation">{inline_exp.content}</span>'
+            processed_line += explanation_html
+        
+        return processed_line
     
     def _generate_vibe_card_html(self, vibe_card: VibeCard) -> str:
         """生成注卡HTML结构 - 包含双向跳转"""
