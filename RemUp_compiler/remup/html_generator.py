@@ -470,6 +470,15 @@ class HTMLGenerator:
         
         return '\n'.join(content_parts)
     
+    def _normalize_id(self, theme: str) -> str:
+        """将主题文本转换为安全的HTML ID"""
+        # 将空格和特殊字符转换为连字符
+        import re
+        normalized = re.sub(r'[^\w\s-]', '', theme)  # 移除非字母数字字符
+        normalized = re.sub(r'[-\s]+', '-', normalized)  # 将空格和连字符统一
+        normalized = normalized.lower().strip('-')
+        return f"card-{normalized}"  # 添加前缀避免纯数字ID
+
     def _generate_card(self, card: MainCard) -> str:
         """生成单个卡片HTML"""
         self.current_card_theme = card.theme
@@ -483,8 +492,12 @@ class HTMLGenerator:
             region_html = self._generate_region(region)
             regions_html.append(region_html)
         
+        # 使用标准化的ID
+        card_id = self._normalize_id(card.theme)
+        
+        # 生成标签和区域内容...
         return f'''
-        <div class="card" id="{card.theme}">
+        <div class="card" id="{card_id}">
             <h2 class="card-title">{card.theme}</h2>
             
             <!-- 标签区域 -->
@@ -675,7 +688,8 @@ class HTMLGenerator:
         for archive in archives:
             card_links = []
             for card in archive.cards:
-                card_links.append(f'<a href="#{card.theme}" class="archive-card-link">{card.theme}</a>')
+                card_id = self._normalize_id(card.theme)
+                card_links.append(f'<a href="#{card_id}" class="archive-card-link">{card.theme}</a>')
             
             archive_html = f'''
             <div class="archive-section">
