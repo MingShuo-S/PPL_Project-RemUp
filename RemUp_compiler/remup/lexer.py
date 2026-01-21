@@ -6,19 +6,19 @@ class Lexer:
     词法分析器 - 修复列表项内容提取问题
     """
     
-    # 定义词法规则（正则表达式模式）
+    # 定义词法规则（正则表达式模式）- 修复前导空白符敏感性问题
     PATTERNS = {
-        'archive': re.compile(r'^--<([^>]+)>--\s*$'),
-        'card_start': re.compile(r'^<\+([^/]+)\s*$'),
-        'card_end': re.compile(r'^/\+>\s*$'),
+        'archive': re.compile(r'^\s*--<([^>]+)>--\s*$'),  # 修复：允许前导空白符
+        'card_start': re.compile(r'^\s*<\+([^/]+)\s*$'),   # 修复：允许前导空白符
+        'card_end': re.compile(r'^\s*/\+>\s*$'),          # 修复：允许前导空白符
         'label': re.compile(r'\(([^:]+):\s*([^)]+)\)'),
-        'region': re.compile(r'^---\s*([^\s].*?)\s*$'),
+        'region': re.compile(r'^\s*---\s*([^\s].*?)\s*$'), # 修复：允许前导空白符
         'vibe_card': re.compile(r'`([^`\n]+)`\[([^\]]*)\]'),
         'inline_explanation': re.compile(r'>>\s*([^\n]+?)\s*$'),
-        'code_block_start': re.compile(r'^```\s*(\w*)\s*$'),
-        'code_block_end': re.compile(r'^```\s*$'),
-        'ordered_list': re.compile(r'^(\d+\.\s+.*)$'),  # 修复：捕获整个列表项
-        'unordered_list': re.compile(r'^(-\\s+.*)$'),    # 修复：捕获整个列表项
+        'code_block_start': re.compile(r'^\s*```\s*(\w*)\s*$'),  # 修复：允许前导空白符
+        'code_block_end': re.compile(r'^\s*```\s*$'),           # 修复：允许前导空白符
+        'ordered_list': re.compile(r'^\s*(\d+\.\s+.*)$'),       # 修复：允许前导空白符
+        'unordered_list': re.compile(r'^\s*(-\s+.*)$'),         # 修复：允许前导空白符，纠正模式错误
         'bold_text': re.compile(r'\*\*(.*?)\*\*'),
         'empty_line': re.compile(r'^\s*$')
     }
@@ -44,10 +44,10 @@ class Lexer:
         return self.tokens
     
     def _process_line(self, line: str):
-        """处理单行文本"""
+        """处理单行文本 - 增强空白符容错能力"""
         # 处理代码块状态
         if self.in_code_block:
-            if self.PATTERNS['code_block_end'].match(line):
+            if self.PATTERNS['code_block_end'].match(line.strip()):  # 使用strip()确保匹配
                 # 结束代码块
                 if self.current_code_block_content:
                     code_content = '\n'.join(self.current_code_block_content)
@@ -75,31 +75,32 @@ class Lexer:
             self.current_code_block_content = []
             return
         
-        # 检查归档定义
+        # 检查归档定义 - 使用修复后的模式（现在允许前导空白）
         archive_match = self.PATTERNS['archive'].match(line)
         if archive_match:
-            self.tokens.append(('ARCHIVE', archive_match.group(1), self.current_line_num))
+            self.tokens.append(('ARCHIVE', archive_match.group(1).strip(), self.current_line_num))
             return
         
-        # 检查卡片开始
+        # 检查卡片开始 - 使用修复后的模式（现在允许前导空白）
         card_start_match = self.PATTERNS['card_start'].match(line)
         if card_start_match:
-            self.tokens.append(('CARD_START', card_start_match.group(1), self.current_line_num))
+            self.tokens.append(('CARD_START', card_start_match.group(1).strip(), self.current_line_num))
             return
         
-        # 检查卡片结束
+        # 检查卡片结束 - 使用修复后的模式（现在允许前导空白）
         card_end_match = self.PATTERNS['card_end'].match(line)
         if card_end_match:
             self.tokens.append(('CARD_END', '', self.current_line_num))
             return
         
-        # 检查区域定义
+        # 检查区域定义 - 使用修复后的模式（现在允许前导空白）
         region_match = self.PATTERNS['region'].match(line)
         if region_match:
-            self.tokens.append(('REGION', region_match.group(1), self.current_line_num))
+            region_name = region_match.group(1).strip() if region_match.group(1) else ""
+            self.tokens.append(('REGION', region_name, self.current_line_num))
             return
         
-        # 处理行内元素
+        # 处理行内元素 - 保持原有逻辑
         self._process_inline_elements(line)
     
     def _process_inline_elements(self, line: str):
