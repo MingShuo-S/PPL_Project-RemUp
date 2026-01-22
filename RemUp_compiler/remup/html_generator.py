@@ -570,119 +570,114 @@ class HTMLGenerator:
         '''
     
     def _process_region_content(self, region: Region) -> str:
-        """处理区域内容 - 修复注卡行内显示问题"""
+        """处理区域内容 - 修复列表项内联元素处理"""
         content_parts = []
-        i = 0
         
-        while i < len(region.lines):
-            line = region.lines[i]
+        # 记录当前列表状态
+        current_list_type = None  # 'ul' 或 'ol'
+        current_list_items = []
+        current_list_line_indices = []  # 记录每个列表项对应的原始行号
+        
+        def flush_current_list():
+            """将当前列表生成HTML并添加到内容中"""
+            nonlocal current_list_type, current_list_items, current_list_line_indices
+            if current_list_items:
+                # 生成列表HTML
+                list_tag = 'ul' if current_list_type == 'ul' else 'ol'
+                items_html = []
+                
+                for i, (item_content, line_index) in enumerate(zip(current_list_items, current_list_line_indices)):
+                    # 处理列表项中的注卡和行内解释
+                    processed_item = self._process_single_line(item_content, line_index, region)
+                    items_html.append(f'<li>{processed_item}</li>')
+                
+                list_html = f'<{list_tag} class="region-list">{"".join(items_html)}</{list_tag}>'
+                content_parts.append(list_html)
+                current_list_items.clear()
+                current_list_line_indices.clear()
+            current_list_type = None
+        
+        for i, line in enumerate(region.lines):
             
             # 检查是否是列表项
-            if line.strip().startswith('- ') or re.match(r'^\s*\d+\.\s+', line.strip()):
-                list_type = 'ul' if line.strip().startswith('- ') else 'ol'
-                list_items = []
+            is_unordered = line.strip().startswith('- ')
+            is_ordered = re.match(r'^\d+\.\s+', line.strip())
+            
+            if is_unordered or is_ordered:
+                # 确定列表类型
+                new_list_type = 'ul' if is_unordered else 'ol'
                 
-                # 收集连续列表项
-                while i < len(region.lines) and (
-                    region.lines[i].strip().startswith('- ') or 
-                    re.match(r'^\s*\d+\.\s+', region.lines[i].strip())
-                ):
-                    current_line = region.lines[i]
-                    
-                    # 提取列表项内容（保留完整行内容）
-                    if current_line.strip().startswith('- '):
-                        # 无序列表项：保留原始内容，包括标记
-                        item_content = current_line.strip()
-                    else:
-                        # 有序列表项：保留原始内容，包括数字标记
-                        item_content = current_line.strip()
-                    
-                    # 处理列表项中的注卡和行内元素 - 关键修复：保持行内显示
-                    processed_item = self._process_line_preserving_inline_elements(item_content, i, region)
-                    list_items.append(f'<li>{processed_item}</li>')
-                    i += 1
+                # 如果列表类型改变，完成当前列表
+                if new_list_type != current_list_type:
+                    flush_current_list()
+                    current_list_type = new_list_type
                 
-                # 生成列表HTML
-                list_html = f'<{list_type} class="region-list">{"".join(list_items)}</{list_type}>'
-                content_parts.append(list_html)
+                # 提取列表项内容
+                if is_unordered:
+                    content = line.strip()[2:].strip()  # 去掉 "- "
+                else:
+                    # 去掉数字和点
+                    content = re.sub(r'^\d+\.\s*', '', line.strip()).strip()
+                
+                # 添加到当前列表（保留原始行号）
+                if content.strip():  # 只有有内容时才添加
+                    current_list_items.append(content)
+                    current_list_line_indices.append(i)  # 记录原始行号
+                
             else:
-                # 处理普通文本行 - 确保注卡在行内显示
-                processed_line = self._process_line_preserving_inline_elements(line, i, region)
-                if processed_line.strip():
-                    # 只有包含实际内容时才添加<p>标签，确保注卡不被分割
+                # 非列表行，完成当前列表
+                flush_current_list()
+                
+                # 处理普通文本行
+                processed_line = self._process_single_line(line, i, region)
+                if processed_line.strip():  # 只有有内容时才添加
                     content_parts.append(f'<p>{processed_line}</p>')
-                i += 1
+        
+        # 处理末尾的列表
+        flush_current_list()
         
         return '\n'.join(content_parts)
-    
-    def _process_line_preserving_inline_elements(self, line: str, line_index: int, region: Region) -> str:
-        """处理单行文本中的行内元素 - 确保注卡保持行内位置"""
-        processed_line = line
-        
-        # 按顺序处理区域中的所有注卡，进行精确替换（保持行内上下文）
-        for vibe_card in region.vibe_cards:
-            # 精确匹配注卡内容在行中的位置（确保完整匹配）
-            if vibe_card.content in processed_line:
-                # 生成注卡HTML（纯行内元素）
-                vibe_html = self._generate_inline_vibe_card_html(vibe_card)
-                # 直接替换，保持行内流动，不引入额外包装
-                processed_line = processed_line.replace(vibe_card.content, vibe_html)
-        
-        # 处理行内解释（如果有）
-        inline_exp = region.inline_explanations.get(line_index)
-        if inline_exp and hasattr(inline_exp, 'content'):
-            # 行内解释作为行内元素添加
-            explanation_html = f'<span class="inline-explanation">{inline_exp.content}</span>'
-            # 添加到行末，保持行内流动
-            processed_line += explanation_html
-        
-        return processed_line
-    
-    def _generate_inline_vibe_card_html(self, vibe_card: VibeCard) -> str:
-        """生成行内注卡HTML结构 - 纯行内元素，避免块级包装"""
-        annotation_id = f"annotation_{vibe_card.id}"
-        
-        # 记录注卡信息用于归档
-        self.vibe_cards_info.append({
-            'id': annotation_id,
-            'content': vibe_card.content,
-            'annotation': vibe_card.annotation,
-            'card_theme': self.current_card_theme
-        })
-        
-        # 返回纯粹的行内HTML结构，确保不破坏文本流
-        return f'''<span class="annotation-container"><span class="annotation" id="{annotation_id}">{vibe_card.content}<span class="annotation-popup">{vibe_card.annotation}<a href="#{annotation_id}" class="back-to-source">↩ 跳回原文</a></span></span></span>'''
-
-    def _process_list_item_content(self, content: str, line_index: int, region: Region) -> str:
-        """处理列表项内容中的行内元素 - 修复版本"""
-        processed_content = content
-        
-        # 1. 处理注卡
-        for vibe_card in region.vibe_cards:
-            if vibe_card.content in processed_content:
-                vibe_html = self._generate_vibe_card_html(vibe_card)
-                processed_content = processed_content.replace(vibe_card.content, vibe_html)
-        
-        # 2. 处理行内解释
-        inline_exp = region.inline_explanations.get(line_index)
-        if inline_exp and hasattr(inline_exp, 'content'):
-            # 添加行内解释
-            explanation_html = f'<span class="inline-explanation">{inline_exp.content}</span>'
-            processed_content += explanation_html
-        
-        return processed_content
 
     def _process_single_line(self, line: str, line_index: int, region: Region) -> str:
-        """处理单行文本，包括注卡和行内解释"""
+        """处理单行文本，包括注卡、行内解释、Markdown语法和字体放大语法"""
         processed_line = line
         
-        # 处理注卡
+        # 1. 首先处理注卡
         for vibe_card in region.vibe_cards:
-            if vibe_card.content in processed_line:
+            if f'__{vibe_card.content}__' in processed_line:
                 vibe_html = self._generate_vibe_card_html(vibe_card)
-                processed_line = processed_line.replace(vibe_card.content, vibe_html)
+                processed_line = processed_line.replace(f'__{vibe_card.content}__ ', vibe_html)
+                vibe_card.used = True  # 标记已使用
         
-        # 处理行内解释
+        # 2. 处理字体放大语法（按放大级别从高到低处理）
+        # 2.1 处理双+号放大：++内容++ → 1.5倍
+        processed_line = re.sub(r'\+\+(.*?)\+\+', self._generate_size_html(1.5), processed_line)
+        
+        # 2.2 处理单+号放大：+内容+ → 1.2倍
+        processed_line = re.sub(r'\+(.*?)\+', self._generate_size_html(1.2), processed_line)
+        
+        # 3. 处理Markdown行内语法（按优先级从高到低处理）
+        # 3.1 处理加粗且斜体：***文本*** 或 **_文本_**
+        processed_line = re.sub(r'\*\*\*(.*?)\*\*\*', r'<strong><em>\1</em></strong>', processed_line)
+        processed_line = re.sub(r'(\*\*_)(.*?)(_\*\*)', r'<strong><em>\2</em></strong>', processed_line)
+        
+        # 3.2 处理加粗：**文本**
+        processed_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', processed_line)
+        
+        # 3.3 处理斜体：*文本* 或 _文本_
+        processed_line = re.sub(r'\*(.*?)\*', r'<em>\1</em>', processed_line)
+        processed_line = re.sub(r'_(.*?)_', r'<em>\1</em>', processed_line)
+        
+        # 3.4 处理高亮：==文本==
+        processed_line = re.sub(r'==(.*?)==', r'<mark>\1</mark>', processed_line)
+        
+        # 3.5 处理删除线：~~文本~~
+        processed_line = re.sub(r'~~(.*?)~~', r'<del>\1</del>', processed_line)
+        
+        # 3.6 处理行内代码：`代码`
+        processed_line = re.sub(r'`(.*?)`', r'<code class="inline-code">\1</code>', processed_line)
+        
+        # 4. 处理行内解释
         inline_exp = region.inline_explanations.get(line_index)
         if inline_exp and hasattr(inline_exp, 'content'):
             # 添加行内解释
@@ -690,6 +685,13 @@ class HTMLGenerator:
             processed_line += explanation_html
         
         return processed_line
+
+    def _generate_size_html(self, scale_factor: float):
+        """生成字体放大HTML的辅助函数"""
+        def size_wrapper(match):
+            content = match.group(1)
+            return f'<span style="font-size: {scale_factor}em; display: inline-block;">{content}</span>'
+        return size_wrapper
     
     def _generate_vibe_card_html(self, vibe_card: VibeCard) -> str:
         """生成注卡HTML结构 - 包含双向跳转"""

@@ -6,20 +6,19 @@ class Lexer:
     词法分析器 - 修复列表项内容提取问题
     """
     
-    # 定义词法规则（正则表达式模式）- 修复前导空白符敏感性问题
+    # 定义词法规则（正则表达式模式）
     PATTERNS = {
-        'archive': re.compile(r'^\s*--<([^>]+)>--\s*$'),  # 修复：允许前导空白符
-        'card_start': re.compile(r'^\s*<\+([^/]+)\s*$'),   # 修复：允许前导空白符
-        'card_end': re.compile(r'^\s*/\+>\s*$'),          # 修复：允许前导空白符
-        'label': re.compile(r'\(([^:]+):\s*([^)]+)\)'),
-        'region': re.compile(r'^\s*---\s*([^\s].*?)\s*$'), # 修复：允许前导空白符
+        'archive': re.compile(r'^\s*--<([^>]+)>--\s*$'),
+        'card_start': re.compile(r'^\s*<\+([^/]+)\s*$'),
+        'card_end': re.compile(r'^\s*/\+>\s*$'),
+        'label': re.compile(r'\s*\(([^:]+):\s*([^)]+)\)'),
+        'region': re.compile(r'^\s*---\s*([^\s].*?)\s*$'),
         'vibe_card': re.compile(r'`([^`\n]+)`\[([^\]]*)\]'),
         'inline_explanation': re.compile(r'>>\s*([^\n]+?)\s*$'),
-        'code_block_start': re.compile(r'^\s*```\s*(\w*)\s*$'),  # 修复：允许前导空白符
-        'code_block_end': re.compile(r'^\s*```\s*$'),           # 修复：允许前导空白符
-        'ordered_list': re.compile(r'^\s*(\d+\.\s+.*)$'),       # 修复：允许前导空白符
-        'unordered_list': re.compile(r'^\s*(-\s+.*)$'),         # 修复：允许前导空白符，纠正模式错误
-        'bold_text': re.compile(r'\*\*(.*?)\*\*'),
+        'code_block_start': re.compile(r'^\s*```\s*(\w*)\s*$'),
+        'code_block_end': re.compile(r'^\s*```\s*$'),
+        'ordered_list': re.compile(r'^\s*(\d+\.\s+.*)$'),  # 修复：捕获整个列表项
+        'unordered_list': re.compile(r'^\s*(-\\s+.*)$'),    # 修复：捕获整个列表项
         'empty_line': re.compile(r'^\s*$')
     }
     
@@ -44,10 +43,10 @@ class Lexer:
         return self.tokens
     
     def _process_line(self, line: str):
-        """处理单行文本 - 增强空白符容错能力"""
+        """处理单行文本"""
         # 处理代码块状态
         if self.in_code_block:
-            if self.PATTERNS['code_block_end'].match(line.strip()):  # 使用strip()确保匹配
+            if self.PATTERNS['code_block_end'].match(line):
                 # 结束代码块
                 if self.current_code_block_content:
                     code_content = '\n'.join(self.current_code_block_content)
@@ -75,32 +74,31 @@ class Lexer:
             self.current_code_block_content = []
             return
         
-        # 检查归档定义 - 使用修复后的模式（现在允许前导空白）
+        # 检查归档定义
         archive_match = self.PATTERNS['archive'].match(line)
         if archive_match:
-            self.tokens.append(('ARCHIVE', archive_match.group(1).strip(), self.current_line_num))
+            self.tokens.append(('ARCHIVE', archive_match.group(1), self.current_line_num))
             return
         
-        # 检查卡片开始 - 使用修复后的模式（现在允许前导空白）
+        # 检查卡片开始
         card_start_match = self.PATTERNS['card_start'].match(line)
         if card_start_match:
-            self.tokens.append(('CARD_START', card_start_match.group(1).strip(), self.current_line_num))
+            self.tokens.append(('CARD_START', card_start_match.group(1), self.current_line_num))
             return
         
-        # 检查卡片结束 - 使用修复后的模式（现在允许前导空白）
+        # 检查卡片结束
         card_end_match = self.PATTERNS['card_end'].match(line)
         if card_end_match:
             self.tokens.append(('CARD_END', '', self.current_line_num))
             return
         
-        # 检查区域定义 - 使用修复后的模式（现在允许前导空白）
+        # 检查区域定义
         region_match = self.PATTERNS['region'].match(line)
         if region_match:
-            region_name = region_match.group(1).strip() if region_match.group(1) else ""
-            self.tokens.append(('REGION', region_name, self.current_line_num))
+            self.tokens.append(('REGION', region_match.group(1), self.current_line_num))
             return
         
-        # 处理行内元素 - 保持原有逻辑
+        # 处理行内元素
         self._process_inline_elements(line)
     
     def _process_inline_elements(self, line: str):
@@ -124,8 +122,8 @@ class Lexer:
             print(f"🔍 LEXER: 列表项内容='{list_content}'")
             
             # 标记列表项开始
-            list_type = 'ORDERED_LIST_ITEM' if ordered_match else 'UNORDERED_LIST_ITEM'
-            self.tokens.append((list_type, list_content, self.current_line_num))
+            #list_type = 'ORDERED_LIST_ITEM' if ordered_match else 'UNORDERED_LIST_ITEM'
+            #self.tokens.append((list_type, list_content, self.current_line_num))
             
             # 处理列表项内容中的行内元素
             # 修复：提取内容部分（去掉列表标记）
@@ -143,23 +141,24 @@ class Lexer:
     def _process_line_content(self, content: str):
         """处理行内容中的各种行内元素"""
         remaining = content.strip()
-        
+        text=''
+        explanation = ''
         while remaining:
             # 1. 检查注卡
             vibe_card_match = self.PATTERNS['vibe_card'].search(remaining)
             if vibe_card_match:
                 # 添加注卡前的文本（如果有）
                 before_text = remaining[:vibe_card_match.start()].strip()
-                if before_text:
-                    self.tokens.append(('TEXT', before_text, self.current_line_num))
                 
                 # 添加注卡
                 card_content = vibe_card_match.group(1)
                 annotation = vibe_card_match.group(2)
-                self.tokens.append(('VIBE_CARD', f"{card_content}[{annotation}]", self.current_line_num))
                 
                 # 更新剩余内容
                 remaining = remaining[vibe_card_match.end():].strip()
+                text+=before_text+' '+f'__{card_content}__'+' '
+            
+                self.tokens.append(('VIBE_CARD', f"{card_content}[{annotation}]", self.current_line_num))
                 continue
             
             # 2. 检查行内解释
@@ -168,36 +167,26 @@ class Lexer:
                 # 添加行内解释前的文本（如果有）
                 before_text = remaining[:inline_exp_match.start()].strip()
                 if before_text:
-                    self.tokens.append(('TEXT', before_text, self.current_line_num))
+                    text+=before_text
+                print(text)
                 
                 # 添加行内解释
                 explanation = inline_exp_match.group(1)
-                self.tokens.append(('INLINE_EXPLANATION', explanation, self.current_line_num))
                 
                 # 更新剩余内容
                 remaining = remaining[inline_exp_match.end():].strip()
                 continue
             
-            # 3. 检查加粗文本
-            bold_match = self.PATTERNS['bold_text'].search(remaining)
-            if bold_match:
-                # 添加加粗文本前的文本（如果有）
-                before_text = remaining[:bold_match.start()].strip()
-                if before_text:
-                    self.tokens.append(('TEXT', before_text, self.current_line_num))
-                
-                # 添加加粗文本
-                bold_content = bold_match.group(1)
-                self.tokens.append(('BOLD_TEXT', bold_content, self.current_line_num))
-                
-                # 更新剩余内容
-                remaining = remaining[bold_match.end():].strip()
-                continue
-            
-            # 4. 如果没有匹配到任何特殊模式，将剩余内容作为普通文本
+            # 3. 如果没有匹配到任何特殊模式，将剩余内容作为普通文本
             if remaining:
-                self.tokens.append(('TEXT', remaining, self.current_line_num))
+                text+=remaining
                 break
+        
+        # 添加普通文本
+        if text:
+            self.tokens.append(('TEXT', text, self.current_line_num))
+        if explanation:
+            self.tokens.append(('INLINE_EXPLANATION', explanation, self.current_line_num))
 
 def print_tokens(tokens):
     """打印词法分析结果"""
@@ -212,6 +201,7 @@ if __name__ == "__main__":
     # 测试用例
     test_code = """
 --<Vocabulary>--
+gugugaga
 <+vigilant
 (>: #careful, #watchful, 近义词)
 (!: 重要)
@@ -221,6 +211,8 @@ adj. 警惕的；警觉的；戒备的
 - be vigilant about/against/over >>对…保持警惕
 - remain/stay vigilant >>保持警惕
 - require vigilance >>（需要警惕性）
+1. rrrr  >> 很烦恼的样子
+3. aaaa  >> 123123
 ---例句
 - Citizens are urged to remain vigilant against cyber scams. `网络诈骗`[指通过互联网进行的欺诈行为] >>敦促公民对网络诈骗保持警惕
 /+>

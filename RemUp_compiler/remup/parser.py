@@ -197,7 +197,7 @@ class Parser:
         # 解析区域内容
         while self.current_token and self.current_token[0] not in ['REGION', 'CARD_END']:
             token_type, token_value, _ = self.current_token
-            
+            print(self.current_token)
             if token_type in ['UNORDERED_LIST_ITEM', 'ORDERED_LIST_ITEM']:
                 # 专门处理列表项
                 self.parse_list_item(region, token_type)
@@ -274,8 +274,7 @@ class Parser:
             if self.current_card:
                 self.current_card.vibe_cards.append(vibe_card)
             
-            # 在区域行中添加注卡内容
-            region.lines.append(card_content)
+            
             
             self.vibe_card_counter += 1
         
@@ -290,7 +289,7 @@ class Parser:
         
         # 关联到前一行
         if region.lines:
-            last_line_index = len(region.lines) - 1
+            last_line_index = len(region.lines) -1
             last_line_content = region.lines[last_line_index]
             inline_explanation = Inline_Explanation(last_line_content, content)
             region.inline_explanations[last_line_index] = inline_explanation
