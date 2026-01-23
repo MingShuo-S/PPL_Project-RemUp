@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HTML生成器 v3.1 - 修复label_types初始化问题
+HTML生成器 v3.2 - 修复注卡显示和定位问题
 """
 
 import os
@@ -267,185 +267,269 @@ class HTMLGenerator:
                 self.card_themes.add(card.theme)
     
     def _build_full_html(self, title: str, main_content: str, 
-                        vibe_archive_content: str, other_archives_content: str,
-                        css_filename: str, theme_selector: str) -> str:
+                    vibe_archive_content: str, other_archives_content: str,
+                    css_filename: str, theme_selector: str) -> str:
         """构建完整的HTML文档结构"""
         
         safe_title = title.replace('"', '&quot;').replace("'", '&#39;')
         
-        return f'''<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{safe_title}</title>
-    <link rel="stylesheet" href="{css_filename}" id="mainStylesheet">
-</head>
-<body>
-    <div class="container">
-        <!-- 主题选择器 -->
-        {theme_selector}
-        
-        <!-- 页面标题 -->
-        <header class="page-header">
-            <h1 class="page-title">{safe_title}</h1>
-        </header>
-        
-        <!-- 主卡内容 -->
-        <main class="main-content">
-            {main_content}
-        </main>
-        
-        <!-- 注卡归档 -->
-        {vibe_archive_content}
-        
-        <!-- 其他归档 -->
-        <nav class="other-archives">
-            {other_archives_content}
-        </nav>
-    </div>
-    
-    <script>
-        // 主题切换功能
-        function changeTheme(themeName) {{
-            const stylesheet = document.getElementById('mainStylesheet');
-            stylesheet.href = themeName + '.css';
-            
-            // 保存用户选择到本地存储
-            localStorage.setItem('preferredTheme', themeName);
-        }}
-        
-        // 页面加载时应用保存的主题
-        document.addEventListener('DOMContentLoaded', function() {{
-            const savedTheme = localStorage.getItem('preferredTheme');
-            if (savedTheme) {{
-                const selector = document.getElementById('themeSelector');
-                if (selector) {{
-                    selector.value = savedTheme;
-                    changeTheme(savedTheme);
-                }}
-            }}
-        }});
-        
-        // 原有的交互功能
-        document.addEventListener('DOMContentLoaded', function() {{
-            // 1. 标签跳转功能
-            const labelLinks = document.querySelectorAll('.label-link');
-            labelLinks.forEach(link => {{
-                link.addEventListener('click', function(e) {{
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    
-                    if (targetElement) {{
-                        targetElement.scrollIntoView({{ 
-                            behavior: 'smooth', 
-                            block: 'center' 
-                        }});
-                        
-                        targetElement.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
-                        setTimeout(() => {{
-                            targetElement.style.backgroundColor = '';
-                        }}, 2000);
-                    }}
-                }});
-            }});
+        # 简化的JavaScript代码，避免双重括号问题
+        js_code = '''
+    // 智能注卡定位与状态管理
+    function initAnnotationPositioning() {
+        const containers = document.querySelectorAll('.annotation-container');
+        let activeAnnotation = null;
+        let hideTimeout = null;
 
-            // 2. 注卡跳转功能
-            const vibeLinks = document.querySelectorAll('.vibe-link, .back-to-source');
-            vibeLinks.forEach(link => {{
-                link.addEventListener('click', function(e) {{
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    
-                    if (targetElement) {{
-                        targetElement.scrollIntoView({{ 
-                            behavior: 'smooth', 
-                            block: 'center' 
-                        }});
-                        
-                        if (targetElement.classList.contains('annotation')) {{
-                            targetElement.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
-                            setTimeout(() => {{
-                                targetElement.style.backgroundColor = '';
-                            }}, 2000);
-                        }}
-                    }}
-                }});
-            }});
+        containers.forEach(container => {
+            const annotation = container.querySelector('.annotation');
+            const popup = container.querySelector('.annotation-popup');
 
-            // 3. 归档导航跳转
-            const archiveLinks = document.querySelectorAll('.archive-card-link');
-            archiveLinks.forEach(link => {{
-                link.addEventListener('click', function(e) {{
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    const targetElement = document.querySelector(targetId);
-                    
-                    if (targetElement) {{
-                        targetElement.scrollIntoView({{ 
-                            behavior: 'smooth', 
-                            block: 'start' 
-                        }});
-                    }}
-                }});
-            }});
+            if (!annotation || !popup) return;
 
-            // 4. 注卡悬停效果优化
-            const annotations = document.querySelectorAll('.annotation');
-            annotations.forEach(annotation => {{
-                annotation.addEventListener('mouseenter', function() {{
-                    annotations.forEach(a => a.classList.remove('active'));
-                    this.classList.add('active');
-                }});
-            }});
+            // 计算最佳显示位置
+            const updatePosition = () => {
+                const rect = annotation.getBoundingClientRect();
+                const popupRect = popup.getBoundingClientRect();
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
 
-            // 5. 响应式网格布局调整
-            function adjustGridLayout() {{
-                const archiveCards = document.querySelectorAll('.archive-cards');
-                const screenWidth = window.innerWidth;
+                // 默认显示在右下方
+                let left = rect.left;
+                let top = rect.bottom + 5;
+
+                // 边界检测
+                if (left + popupRect.width > vw - 10) {
+                    left = vw - popupRect.width - 10;
+                }
+                if (top + popupRect.height > vh - 10) {
+                    top = rect.top - popupRect.height - 5;
+                }
+
+                popup.style.left = left + 'px';
+                popup.style.top = top + 'px';
+            };
+
+            // 显示注卡
+            const showPopup = () => {
+                if (hideTimeout) clearTimeout(hideTimeout);
+                if (activeAnnotation && activeAnnotation !== popup) {
+                    activeAnnotation.style.display = 'none';
+                    activeAnnotation.previousElementSibling?.classList.remove('active');
+                }
+                updatePosition();
+                popup.style.display = 'block';
+                activeAnnotation = popup;
+            };
+
+            // 隐藏注卡
+            const hidePopup = () => {
+                hideTimeout = setTimeout(() => {
+                    if (activeAnnotation === popup && !popup.classList.contains('active')) {
+                        popup.style.display = 'none';
+                        activeAnnotation = null;
+                    }
+                }, 150);
+            };
+
+            // 鼠标悬停显示
+            annotation.addEventListener('mouseenter', () => {
+                if (!popup.classList.contains('active')) {
+                    showPopup();
+                }
+            });
+
+            annotation.addEventListener('mouseleave', () => {
+                if (!popup.classList.contains('active')) {
+                    hidePopup();
+                }
+            });
+
+            // 点击锁定显示
+            annotation.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                archiveCards.forEach(container => {{
-                    if (screenWidth >= 1200) {{
-                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
-                    }} else if (screenWidth >= 1024) {{
-                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
-                    }} else if (screenWidth >= 768) {{
-                        container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
-                    }} else {{
-                        container.style.gridTemplateColumns = '1fr';
-                    }}
-                }});
-            }}
+                const wasActive = popup.classList.contains('active');
+                
+                // 关闭其他注卡
+                document.querySelectorAll('.annotation-popup.active').forEach(otherPopup => {
+                    if (otherPopup !== popup) {
+                        otherPopup.classList.remove('active');
+                        otherPopup.style.display = 'none';
+                    }
+                });
+                
+                // 切换当前状态
+                popup.classList.toggle('active', !wasActive);
+                annotation.classList.toggle('active', !wasActive);
+                
+                if (!wasActive) {
+                    showPopup();
+                } else {
+                    popup.style.display = 'none';
+                    activeAnnotation = null;
+                }
+            });
 
-            adjustGridLayout();
-            window.addEventListener('resize', adjustGridLayout);
+            // 注卡内部交互
+            popup.addEventListener('mouseenter', () => {
+                if (hideTimeout) clearTimeout(hideTimeout);
+            });
 
-            // 6. 页面加载时的锚点跳转处理
-            if (window.location.hash) {{
-                const targetElement = document.querySelector(window.location.hash);
-                if (targetElement) {{
-                    setTimeout(() => {{
-                        targetElement.scrollIntoView({{ behavior: 'smooth' }});
-                    }}, 100);
-                }}
-            }}
+            popup.addEventListener('mouseleave', () => {
+                if (!popup.classList.contains('active')) {
+                    hidePopup();
+                }
+            });
+        });
 
-            // 7. 键盘导航支持
-            document.addEventListener('keydown', function(e) {{
-                if (e.key === 'Escape') {{
-                    annotations.forEach(annotation => {{
-                        annotation.classList.remove('active');
-                    }});
-                }}
-            }});
-        }});
-    </script>
-</body>
-</html>'''
+        // 点击页面空白处关闭所有注卡
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.annotation-container')) {
+                document.querySelectorAll('.annotation-popup').forEach(popup => {
+                    popup.style.display = 'none';
+                    popup.classList.remove('active');
+                    popup.previousElementSibling?.classList.remove('active');
+                });
+                activeAnnotation = null;
+            }
+        });
+
+        // ESC键关闭
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.annotation-popup').forEach(popup => {
+                    popup.style.display = 'none';
+                    popup.classList.remove('active');
+                    popup.previousElementSibling?.classList.remove('active');
+                });
+                activeAnnotation = null;
+            }
+        });
+
+        // 窗口调整时重新定位
+        window.addEventListener('resize', () => {
+            document.querySelectorAll('.annotation-popup').forEach(popup => {
+                if (popup.style.display === 'block') {
+                    const container = popup.closest('.annotation-container');
+                    if (container) {
+                        const annotation = container.querySelector('.annotation');
+                        // 触发位置更新
+                        container.dispatchEvent(new Event('mouseenter'));
+                    }
+                }
+            });
+        });
+    }
+
+    // 主题切换功能
+    function changeTheme(themeName) {
+        const stylesheet = document.getElementById('mainStylesheet');
+        stylesheet.href = themeName + '.css';
+        localStorage.setItem('preferredTheme', themeName);
+    }
+
+    // 页面加载初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 应用保存的主题
+        const savedTheme = localStorage.getItem('preferredTheme');
+        if (savedTheme) {
+            const selector = document.getElementById('themeSelector');
+            if (selector) {
+                selector.value = savedTheme;
+                changeTheme(savedTheme);
+            }
+        }
+
+        // 初始化注卡系统
+        initAnnotationPositioning();
+
+        // 标签跳转功能
+        document.querySelectorAll('.label-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.style.backgroundColor = 'rgba(255, 255, 0, 0.3)';
+                    setTimeout(() => target.style.backgroundColor = '', 2000);
+                }
+            });
+        });
+
+        // 注卡跳转功能
+        document.querySelectorAll('.vibe-link, .back-to-source').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (target.classList.contains('annotation')) {
+                        target.style.backgroundColor = 'rgba(52, 152, 219, 0.3)';
+                        setTimeout(() => target.style.backgroundColor = '', 2000);
+                    }
+                }
+            });
+        });
+
+        // 归档导航跳转
+        document.querySelectorAll('.archive-card-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        });
+
+        // 响应式布局调整
+        function adjustGridLayout() {
+            const width = window.innerWidth;
+            document.querySelectorAll('.archive-cards').forEach(container => {
+                if (width >= 1200) container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(500px, 1fr))';
+                else if (width >= 1024) container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(450px, 1fr))';
+                else if (width >= 768) container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(400px, 1fr))';
+                else container.style.gridTemplateColumns = '1fr';
+            });
+        }
+
+        adjustGridLayout();
+        window.addEventListener('resize', adjustGridLayout);
+
+        // 锚点跳转处理
+        if (window.location.hash) {
+            const target = document.querySelector(window.location.hash);
+            if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth' }), 100);
+        }
+    });
+    '''
     
-    # 其余方法保持不变...
+        return f'''<!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{safe_title}</title>
+        <link rel="stylesheet" href="{css_filename}" id="mainStylesheet">
+    </head>
+    <body>
+        <div class="container">
+            {theme_selector}
+            <header class="page-header">
+                <h1 class="page-title">{safe_title}</h1>
+            </header>
+            <main class="main-content">
+                {main_content}
+            </main>
+            {vibe_archive_content}
+            <nav class="other-archives">
+                {other_archives_content}
+            </nav>
+        </div>
+        <script>{js_code}</script>
+    </body>
+    </html>'''
+        
     def _generate_main_content(self, archives: List[Archive]) -> str:
         """生成主卡内容"""
         content_parts = []
@@ -495,7 +579,6 @@ class HTMLGenerator:
         # 使用标准化的ID
         card_id = self._normalize_id(card.theme)
         
-        # 生成标签和区域内容...
         return f'''
         <div class="card" id="{card_id}">
             <h2 class="card-title">{card.theme}</h2>
@@ -525,7 +608,7 @@ class HTMLGenerator:
                     target_id = item[1:]  # 去掉#号
                     if target_id in self.card_themes:
                         # 有效的跳转链接
-                        content_html.append(f'<a href="#{target_id}" class="label-link">{target_id}</a>')
+                        content_html.append(f'<a href="#card-{target_id}" class="label-link">{target_id}</a>')
                     else:
                         # 无效的跳转链接，只显示文本
                         content_html.append(f'<span class="label-content">{target_id}</span>')
@@ -641,12 +724,18 @@ class HTMLGenerator:
     def _process_single_line(self, line: str, line_index: int, region: Region) -> str:
         """处理单行文本，包括注卡、行内解释、Markdown语法和字体放大语法"""
         processed_line = line
+        match = re.search(r'```\s*(\d+)\s*```', processed_line.strip())
+
+        # 0. 解释代码块标记
+        if match:
+            num = int(match.group(1))
+            return f"<div class='code-block'>{region.code_blocks[num].content.replace('\n','<br/>')}</div>"
         
-        # 1. 首先处理注卡
+        # 1. 处理注卡
         for vibe_card in region.vibe_cards:
             if f'__{vibe_card.content}__' in processed_line:
                 vibe_html = self._generate_vibe_card_html(vibe_card)
-                processed_line = processed_line.replace(f'__{vibe_card.content}__ ', vibe_html)
+                processed_line = processed_line.replace(f'__{vibe_card.content}__', vibe_html)
                 vibe_card.used = True  # 标记已使用
         
         # 2. 处理字体放大语法（按放大级别从高到低处理）
@@ -673,9 +762,6 @@ class HTMLGenerator:
         
         # 3.5 处理删除线：~~文本~~
         processed_line = re.sub(r'~~(.*?)~~', r'<del>\1</del>', processed_line)
-        
-        # 3.6 处理行内代码：`代码`
-        processed_line = re.sub(r'`(.*?)`', r'<code class="inline-code">\1</code>', processed_line)
         
         # 4. 处理行内解释
         inline_exp = region.inline_explanations.get(line_index)

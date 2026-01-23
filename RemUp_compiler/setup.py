@@ -65,13 +65,13 @@ setup(
 
 # 安装后消息
 print("\n" + "="*50)
-print("🎉 RemUp编译器安装完成!")
+print("RemUp编译器安装完成!")
 print("="*50)
-print("💡 快速开始:")
+print("快速开始:")
 print("  remup --help                    # 查看帮助")
 print("  remup --list-themes            # 查看可用主题")
 print("  remup example.remup            # 编译文件")
 print("  remup example.remup -t DarkTheme  # 使用指定主题")
 print("  remup ./notes -d               # 编译目录")
-print("\n📁 注意：静态文件（CSS）需要从GitHub仓库手动复制到项目根目录下的static文件夹中。")
+print("\n注意：静态文件（CSS）需要从GitHub仓库手动复制到项目根目录下的static文件夹中。")
 print("="*50)

@@ -1,4 +1,5 @@
 import re
+import html
 from typing import List, Tuple, Optional, Dict, Any
 from remup.ast_nodes import (
     Document, Archive, MainCard, Region, Label, 
@@ -309,7 +310,7 @@ class Parser:
         # 收集代码内容直到代码块结束
         while self.current_token and self.current_token[0] != 'CODE_BLOCK_END':
             if self.current_token[0] == 'CODE_BLOCK_CONTENT':
-                code_lines.append(self.current_token[1])
+                code_lines.append(html.escape(self.current_token[1]))
             self.advance()
         
         # 消费代码块结束标记
@@ -322,7 +323,8 @@ class Parser:
             code_block = Code_Block(language, code_content)
             
             # 将代码块作为特殊行添加到区域
-            region.lines.append(f"```{language}\n{code_content}\n```")
+            region.lines.append(f'''```{len(region.code_blocks)}```\n''')
+            region.code_blocks.append(code_block)
     
     def build_vibe_archive(self, archives: List[Archive]) -> Optional[VibeArchive]:
         """构建注卡归档"""

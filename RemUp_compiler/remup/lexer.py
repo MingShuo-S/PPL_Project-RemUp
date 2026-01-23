@@ -111,30 +111,6 @@ class Lexer:
             self.tokens.append(('LABEL', f"{symbol}:{','.join(content)}", self.current_line_num))
             return
         
-        # 检查列表项（有序和无序）
-        ordered_match = self.PATTERNS['ordered_list'].match(line)
-        unordered_match = self.PATTERNS['unordered_list'].match(line)
-        
-        if ordered_match or unordered_match:
-            # 提取完整的列表项内容（包括标记）
-            list_content = line.strip()
-            
-            print(f"🔍 LEXER: 列表项内容='{list_content}'")
-            
-            # 标记列表项开始
-            #list_type = 'ORDERED_LIST_ITEM' if ordered_match else 'UNORDERED_LIST_ITEM'
-            #self.tokens.append((list_type, list_content, self.current_line_num))
-            
-            # 处理列表项内容中的行内元素
-            # 修复：提取内容部分（去掉列表标记）
-            if ordered_match:
-                content = ordered_match.group(1).strip()
-            else:
-                content = unordered_match.group(1).strip()
-                
-            self._process_line_content(content)
-            return
-        
         # 处理普通行内容
         self._process_line_content(line)
 

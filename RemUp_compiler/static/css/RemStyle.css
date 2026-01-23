@@ -1,5 +1,5 @@
 /* ============================================
-RemUp 样式系统 v3.4 - 标签布局优化版
+RemUp 样式系统 v4.0 - 智能注卡优化版
 ============================================ */
 
 /* 基础变量定义 */
@@ -24,12 +24,16 @@ RemUp 样式系统 v3.4 - 标签布局优化版
     --font-main: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
     --font-mono: 'Consolas', 'Monaco', 'Courier New', monospace;
     
-    /* 新增：阅读优化变量 */
+    /* 阅读优化变量 */
     --font-size-base: 14px;
     --font-size-large: 1.3em;
     --font-size-small: 0.85em;
     --line-height-comfort: 1.5;
     --spacing-compact: 0.8rem;
+    
+    /* 新增注卡变量 */
+    --popup-top: 0;
+    --popup-left: 0;
 }
 
 /* 重置和基础样式 */
@@ -72,6 +76,27 @@ body {
     font-size: 2em;
 }
 
+/* 主题选择器样式 */
+.theme-selector-container {
+    text-align: right;
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.theme-selector-container label {
+    margin-right: 10px;
+    font-weight: 500;
+    color: var(--remup-gray);
+}
+
+#themeSelector {
+    padding: 5px 10px;
+    border: 1px solid var(--card-border);
+    border-radius: 4px;
+    background: white;
+    color: #2c3e50;
+}
+
 /* 字体放大样式 */
 .size-1-2 {
     font-size: 1.2em;
@@ -86,21 +111,20 @@ body {
     font-weight: 500;
 }
 
-/* 可选：添加平滑的过渡效果 */
 .size-1-2, .size-1-5 {
     transition: font-size 0.2s ease;
 }
 
 /* ============================================
-    主卡样式 - 重新设计标签布局
-    ============================================ */
+    主卡样式
+============================================ */
 .card {
     background: var(--card-bg);
     border-radius: 10px;
     box-shadow: 0 3px 15px var(--card-shadow);
     border: 1px solid var(--card-border);
     padding: 20px;
-    margin-bottom: 0;
+    margin-bottom: 25px;
     position: relative;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     width: 100%;
@@ -111,11 +135,6 @@ body {
 .card:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
-}
-
-/* 卡片标题区域 - 简化布局 */
-.card-header {
-    margin-bottom: 12px;
 }
 
 .card h2 {
@@ -153,7 +172,6 @@ body {
     flex-shrink: 0;
 }
 
-/* 卡片标题文本容器 */
 .card-title-text {
     flex: 1;
     min-width: 0;
@@ -163,8 +181,8 @@ body {
 }
 
 /* ============================================
-    标签系统 - 重新设计为独立行布局
-    ============================================ */
+    标签系统
+============================================ */
 .labels-container {
     display: flex;
     flex-wrap: wrap;
@@ -177,7 +195,6 @@ body {
     align-items: center;
 }
 
-/* 没有标签时的占位样式 */
 .labels-container:empty {
     display: none;
 }
@@ -208,7 +225,6 @@ body {
     z-index: 3;
 }
 
-/* 可跳转标签的特殊样式 */
 .label[href]:not(.label[href=""]) {
     border: 1.5px solid var(--remup-primary);
     background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
@@ -220,7 +236,6 @@ body {
     box-shadow: 0 3px 8px rgba(52, 152, 219, 0.2);
 }
 
-/* 可跳转标签的指示器 */
 .label[href]:not(.label[href=""])::after {
     content: '↗';
     margin-left: 4px;
@@ -275,7 +290,6 @@ body {
     color: var(--remup-gray);
 }
 
-/* 标签链接样式 */
 .label-link {
     color: inherit;
     text-decoration: none;
@@ -287,8 +301,8 @@ body {
 }
 
 /* ============================================
-    区域系统 - 紧凑布局
-    ============================================ */
+    区域系统
+============================================ */
 .region {
     margin: 20px 0;
     position: relative;
@@ -326,8 +340,8 @@ body {
 }
 
 /* ============================================
-    列表样式 - 紧凑布局
-    ============================================ */
+    列表样式
+============================================ */
 .region-content ul,
 .region-content ol {
     margin: 0;
@@ -368,8 +382,8 @@ body {
 }
 
 /* ============================================
-    内容样式 - 阅读优化
-    ============================================ */
+    内容样式
+============================================ */
 .content {
     line-height: var(--line-height-comfort);
     font-size: var(--font-size-base);
@@ -383,7 +397,7 @@ body {
 
 /* ============================================
     代码块样式
-    ============================================ */
+============================================ */
 .code-block {
     background: #2d3748;
     color: #e2e8f0;
@@ -404,28 +418,27 @@ body {
     word-wrap: break-word;
 }
 
-/* 代码高亮样式 */
 .keyword { color: #c678dd; font-weight: bold; }
 .number { color: #d19a66; }
 .string { color: #98c379; }
 .comment { color: #5c6370; font-style: italic; }
 
 /* ============================================
-    行内解释 (>>语法) - 解决与注卡重叠问题
-    ============================================ */
+    行内解释样式
+============================================ */
 .inline-explanation {
     display: block;
     color: #7f8c8d;
     opacity: 0.7;
     font-size: 0.85em;
     font-style: italic;
-    margin-top: 8px; /* 增加上边距，避免与注卡重叠 */
+    margin-top: 8px;
     margin-bottom: 12px;
     padding-left: 16px;
     position: relative;
     white-space: normal;
     word-wrap: break-word;
-    z-index: 1; /* 确保在注卡下方 */
+    z-index: 1;
 }
 
 .inline-explanation::before {
@@ -438,12 +451,12 @@ body {
 }
 
 /* ============================================
-    注卡系统 (`内容`[批注]) - 优化定位避免重叠
-    ============================================ */
+    注卡系统 - 完全重构
+============================================ */
 .annotation-container {
     position: relative;
     display: inline;
-    z-index: 10; /* 提高层级 */
+    z-index: 10;
 }
 
 .annotation {
@@ -464,40 +477,34 @@ body {
     border-bottom-style: solid;
 }
 
-/* 注卡激活状态（点击后） */
 .annotation.active {
     background: rgba(52, 152, 219, 0.2);
     border-bottom: 2px solid #2980b9;
-    border-bottom-style: solid;
     z-index: 10001;
 }
 
-/* 注卡弹出框 - 优化定位逻辑 */
+/* 注卡弹出框 - 固定定位，智能边界检测 */
 .annotation-popup {
-    position: absolute;
+    position: fixed;
     z-index: 10000;
     background: white;
     border: 1px solid #bdc3c7;
     border-radius: 6px;
-    padding: 10px;
-    width: 220px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 12px;
+    width: 280px;
+    max-width: 90vw;
+    max-height: 60vh;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
     font-size: 0.85em;
     line-height: 1.4;
     color: #2c3e50;
     display: none;
     animation: fadeIn 0.2s ease;
+    overflow-y: auto;
     pointer-events: none;
-    /* 智能定位：优先向上弹出，空间不足时向下 */
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* 如果上方空间不足，改为向下弹出 */
-.annotation-container:has(.annotation.active):not(:first-child) .annotation-popup {
-    bottom: auto;
-    top: calc(100% + 8px);
+    top: var(--popup-top, 0);
+    left: var(--popup-left, 0);
+    transform: none;
 }
 
 /* 悬停时显示 */
@@ -506,7 +513,6 @@ body {
     pointer-events: auto;
 }
 
-/* 激活状态时显示（点击后保持显示） */
 .annotation.active + .annotation-popup,
 .annotation-container:focus-within .annotation-popup {
     display: block;
@@ -514,28 +520,41 @@ body {
     z-index: 10002;
 }
 
-/* 跳回原文链接 */
 .back-to-source {
     display: block;
-    margin-top: 6px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #f0f0f0;
     font-size: 0.75em;
     color: var(--remup-primary);
     text-decoration: none;
+    text-align: center;
 }
 
 .back-to-source:hover {
     text-decoration: underline;
+    background: rgba(52, 152, 219, 0.05);
 }
 
-/* 动画效果 */
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateX(-50%) translateY(3px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    from { 
+        opacity: 0; 
+        transform: scale(0.95); 
+    }
+    to { 
+        opacity: 1; 
+        transform: scale(1); 
+    }
+}
+
+.annotation-popup {
+    transform-origin: center bottom;
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 /* ============================================
-    归档系统 - 按钮样式优化
-    ============================================ */
+    归档系统
+============================================ */
 .archive-section {
     width: 100%;
     margin-bottom: 25px;
@@ -563,11 +582,10 @@ body {
 .archive-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 15px; /* 减少间距 */
+    gap: 15px;
     width: 100%;
 }
 
-/* 归档卡片容器 */
 .archive-card {
     background: white;
     border-radius: 10px;
@@ -586,7 +604,6 @@ body {
     border-color: var(--remup-primary);
 }
 
-/* 归档卡片标题 */
 .archive-card-title {
     font-size: 1.3em;
     color: var(--remup-primary);
@@ -596,7 +613,6 @@ body {
     font-weight: 600;
 }
 
-/* 归档卡片内容 */
 .archive-card-content {
     flex: 1;
     margin-bottom: 15px;
@@ -605,7 +621,6 @@ body {
     line-height: 1.5;
 }
 
-/* 归档卡片链接按钮 - 优化样式 */
 .archive-card-link {
     display: inline-flex;
     align-items: center;
@@ -622,7 +637,7 @@ body {
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    margin-top: auto; /* 确保按钮在底部 */
+    margin-top: auto;
 }
 
 .archive-card-link::before {
@@ -651,7 +666,6 @@ body {
     box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
 }
 
-/* 按钮图标 */
 .archive-card-link::after {
     content: '→';
     margin-left: 8px;
@@ -664,8 +678,8 @@ body {
 }
 
 /* ============================================
-    注点归档样式优化
-    ============================================ */
+    注点归档样式
+============================================ */
 .vibe-archive {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     padding: 20px;
@@ -729,7 +743,6 @@ body {
     font-weight: bold;
 }
 
-/* 注点归档跳转链接优化 */
 .vibe-link {
     color: var(--remup-primary);
     text-decoration: none;
@@ -752,32 +765,13 @@ body {
 }
 
 /* ============================================
-    导航链接样式
-    ============================================ */
-.archive-card-link {
-    display: block;
-    padding: 10px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    transition: all 0.3s ease;
-    text-align: center;
-    font-size: 0.9em;
-}
-
-.archive-card-link:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-
-/* ============================================
-    响应式设计 - 优化布局
-    ============================================ */
-/* ============================================
-    响应式设计 - 归档部分优化
-    ============================================ */
+    响应式设计
+============================================ */
 @media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
     .archive-cards {
         grid-template-columns: 1fr;
         gap: 12px;
@@ -799,6 +793,27 @@ body {
         padding: 15px;
         margin: 15px 0;
     }
+    
+    /* 移动端注卡优化 */
+    .annotation-popup {
+        width: 280px;
+        max-width: 95vw;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        right: auto;
+    }
+    
+    .annotation {
+        cursor: pointer;
+    }
+    
+    .annotation-container:hover .annotation-popup {
+        display: none;
+    }
+    
+    .annotation.active + .annotation-popup {
+        display: block;
+    }
 }
 
 @media (min-width: 1024px) {
@@ -813,8 +828,12 @@ body {
     }
 }
 
-/* 小屏幕优化 */
 @media (max-width: 480px) {
+    body {
+        padding: 10px;
+        font-size: 13px;
+    }
+    
     .archive-card-link {
         padding: 8px 16px;
         font-size: 0.85em;
@@ -822,6 +841,17 @@ body {
     
     .vibe-archive-item {
         font-size: 0.85em;
+    }
+    
+    .annotation-popup {
+        width: 260px;
+        padding: 10px;
+        font-size: 0.8em;
+    }
+    
+    .annotation {
+        padding: 2px 4px;
+        font-size: 0.9em;
     }
 }
 
@@ -838,7 +868,7 @@ body {
 
 /* ============================================
     工具类
-    ============================================ */
+============================================ */
 .text-center { text-align: center; }
 .mt-1 { margin-top: 8px; }
 .mb-1 { margin-bottom: 8px; }
